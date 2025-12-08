@@ -2,12 +2,13 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+	<AssemblyName>Microsoft.SpeechServices.PodcastLib.Public</AssemblyName>
+	<RootNamespace>Microsoft.SpeechServices.PodcastLib.Public</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\CommonLib.Public\CommonLib.Public.csproj" />
+    <ProjectReference Include="..\PodcastLib.PublicBase\PodcastLib.PublicBase.csproj" />
   </ItemGroup>
 
 </Project>

@@ -11,19 +11,55 @@ from termcolor import colored
 from microsoft_client_podcast.podcast_client import PodcastClient
 
 
-ARGUMENT_HELP_INPUT_FILE_BLOB_URL = (
+ARGUMENT_HELP_CONTENT_FILE_AZURE_BLOB_URL = (
     'Input file url, supported formats are .pdf and .txt. '
     'The file should be publicly accessible or accessible with a SAS token.')
+
+ARGUMENT_HELP_PLAIN_TEXT_CONTENT_FILE_PATH = (
+    'Path to a plain text file containing the podcast content, the file will be uploaded  by Text property with plain text. '
+    'If this argument is provided, the content will be read from the specified file instead of using a URL.'
+)
+
+ARGUMENT_HELP_BASE64_CONTENT_FILE_PATH = (
+    'Path to a file containing the base64-encoded content for the podcast, the file will be uploaded by Base64Text property with base64-encoded content. '
+    'If this argument is provided, the content will be read from the specified file instead of using a URL.'
+)
 
 ARGUMENT_HELP_TARGET_LOCALE = (
     'The locale of the podcast. Locale code follows BCP-47. You can find the text to speech locale list '
     'here https://learn.microsoft.com/azure/ai-services/speech-service/language-support?tabs=tts.'
 )
 
-ARGUMENT_HELP_FOCUS = (
+ARGUMENT_HELP_ADDITIONAL_INSTRUCTIONS = (
     'The focus of the podcast, which can help guide the content generation. '
     'For example, you can specify "technology" or "health".'
 )
+
+ARGUMENT_HELP_VOICE_NAME = (
+    'The voice name to be used for TTS synthesis. You can find the voice name list '
+    'here https://learn.microsoft.com/azure/ai-services/speech-service/voice-list?tabs=tts.'
+)
+
+ARGUMENT_HELP_MULTI_TALKER_VOICE_SPEAKER_NAMES = (
+    'The multi-talker voice speaker names, separated by comma, to be used for TTS synthesis.'
+)
+
+ARGUMENT_HELP_GENDER_PREFERENCE = (
+    'Gender preference of the podcast voice. Possible values are Female/Male.'
+)
+
+ARGUMENT_HELP_LENGTH = (
+    'The length of the podcast. Possible values are VeryShort/Short/Medium/Long/VeryLong.'
+)
+
+ARGUMENT_HELP_HOST = (
+    'The host configuration of the podcast. Possible values are OneHost/TwoHosts.'
+)
+
+ARGUMENT_HELP_STYLE = (
+    'The style of the podcast. Possible values are Default/Professional/Casual.'
+)
+
 
 def handle_create_generation_and_wait_until_terminated(args):
     client = PodcastClient(
@@ -33,9 +69,17 @@ def handle_create_generation_and_wait_until_terminated(args):
     )
 
     success, error, generation = client.create_generation_and_wait_until_terminated(
-        input_file_url=args.input_file_url,
         target_locale=args.target_locale,
-        focus=args.focus
+        content_file_azure_blob_url=args.content_file_azure_blob_url,
+        plain_text_content_file_path=args.plain_text_content_file_path,
+        base64_content_file_path=args.base64_content_file_path,
+        voice_name=args.voice_name,
+        multi_talker_voice_speaker_names=args.multi_talker_voice_speaker_names,
+        gender_preference=args.gender_preference,
+        length=args.length,
+        host=args.host,
+        style=args.style,
+        additional_instructions=args.additional_instructions
     )
     if not success:
         return
@@ -105,10 +149,17 @@ sub_parsers = root_parser.add_subparsers(required=True, help='subcommand help')
 translate_parser = sub_parsers.add_parser(
     'create_generation_and_wait_until_terminated',
     help='Create podcast generation with pdf/txt file blob url.')
-
-translate_parser.add_argument('--input_file_url', required=False, type=str, help=ARGUMENT_HELP_INPUT_FILE_BLOB_URL)
-translate_parser.add_argument('--target_locale', required=True, type=str, help=ARGUMENT_HELP_TARGET_LOCALE)
-translate_parser.add_argument('--focus', required=False, type=str, help=ARGUMENT_HELP_FOCUS)
+translate_parser.add_argument('--content_file_azure_blob_url', required=False, type=str, help=ARGUMENT_HELP_CONTENT_FILE_AZURE_BLOB_URL)
+translate_parser.add_argument('--plain_text_content_file_path', required=False, type=str, help=ARGUMENT_HELP_PLAIN_TEXT_CONTENT_FILE_PATH)
+translate_parser.add_argument('--base64_content_file_path', required=False, type=str, help=ARGUMENT_HELP_BASE64_CONTENT_FILE_PATH)
+translate_parser.add_argument('--target_locale', required=False, type=str, help=ARGUMENT_HELP_TARGET_LOCALE)
+translate_parser.add_argument('--voice_name', required=False, type=str, help=ARGUMENT_HELP_VOICE_NAME)
+translate_parser.add_argument('--multi_talker_voice_speaker_names', required=False, type=str, help=ARGUMENT_HELP_MULTI_TALKER_VOICE_SPEAKER_NAMES)
+translate_parser.add_argument('--gender_preference', required=False, type=str, help=ARGUMENT_HELP_GENDER_PREFERENCE)
+translate_parser.add_argument('--length', required=False, type=str, help=ARGUMENT_HELP_LENGTH)
+translate_parser.add_argument('--host', required=False, type=str, help=ARGUMENT_HELP_HOST)
+translate_parser.add_argument('--style', required=False, type=str, help=ARGUMENT_HELP_STYLE)
+translate_parser.add_argument('--additional_instructions', required=False, type=str, help=ARGUMENT_HELP_ADDITIONAL_INSTRUCTIONS)
 translate_parser.set_defaults(func=handle_create_generation_and_wait_until_terminated)
 
 translate_parser = sub_parsers.add_parser('get', help='Request get generation API.')

@@ -18,14 +18,22 @@ from microsoft_speech_client_common.client_common_enum import (
     OperationStatus
 )
 from microsoft_client_podcast.podcast_enum import (
-    ContentSourceKind
+    ContentSourceKind,
+    PodcastHostKind,
+    PodcastGenderPreferenceKind,
+    PodcastLengthKind,
+    PodcastStyleKind,
+    ContentFileFormatKind,
 )
 from microsoft_client_podcast.podcast_dataclass import (
-    ContentSourceKind
+    ContentSourceKind,
+    PodcastScriptGenerationConfig,
+
 )
 from microsoft_speech_client_common.client_common_dataclass import (
     OperationDefinition
 )
+
 from microsoft_speech_client_common.client_common_util import (
     dict_to_dataclass, append_url_args
 )
@@ -33,9 +41,11 @@ from microsoft_speech_client_common.client_common_client_base import (
     SpeechLongRunningTaskClientBase
 )
 from microsoft_client_podcast.podcast_dataclass import (
-    PodcastGenerationDefinition, PodcastGenerationContent, PodcastGenerationConfig, PodcastGenerationOutput, PagedGenerationDefinition
+    PodcastGenerationDefinition, PodcastContent, PodcastGenerationOutput, PodcastTtsConfig, PagedGenerationDefinition
 )
 import time
+import base64
+import os
 
 
 class PodcastClient(SpeechLongRunningTaskClientBase):
@@ -53,21 +63,39 @@ class PodcastClient(SpeechLongRunningTaskClientBase):
 
     def create_generation_and_wait_until_terminated(
         self,
-        input_file_url: Url,
         target_locale: locale,
-        focus: str = None
+        content_file_azure_blob_url: Url,
+        plain_text_content_file_path: str = None,
+        base64_content_file_path: str = None,
+        voice_name: str = None,
+        multi_talker_voice_speaker_names: str = None,
+        gender_preference: str = None,
+        length: str = None,
+        host: str = None,
+        style: str = None,
+        additional_instructions: str = None
     ) -> tuple[bool, str, PodcastGenerationDefinition]:
-        if input_file_url is None or target_locale is None:
-            raise ValueError
+        if target_locale is None:
+            raise ValueError("Target locale must be provided")
+        if content_file_azure_blob_url is None and plain_text_content_file_path is None and base64_content_file_path is None:
+            raise ValueError("At least one content source must be provided")
         
         now = datetime.now()
         nowString = now.strftime("%m%d%Y%H%M%S")
         generation_id = f"{nowString}_{target_locale}"
 
         request_body = self.create_generation_creation_body(
-            input_file_url=input_file_url,
+            content_file_azure_blob_url=content_file_azure_blob_url,
+            plain_text_content_file_path=plain_text_content_file_path,
+            base64_content_file_path=base64_content_file_path,
             target_locale=target_locale,
-            focus=focus
+            voice_name=voice_name,
+            multi_talker_voice_speaker_names=multi_talker_voice_speaker_names,
+            gender_preference=gender_preference,
+            length=length,
+            host=host,
+            style=style,
+            additional_instructions=additional_instructions
         )
 
         success, error, response_generation, operation_location = self.request_create_generation(
@@ -130,32 +158,65 @@ class PodcastClient(SpeechLongRunningTaskClientBase):
 
     def create_generation_creation_body(
             self,
-            input_file_url: Url,
             target_locale: locale,
-            focus: str = None
+            content_file_azure_blob_url: Url,
+            plain_text_content_file_path: str = None,
+            base64_content_file_path: str = None,
+            voice_name: str = None,
+            multi_talker_voice_speaker_names: str = None,
+            gender_preference: str = None,
+            length: str = None,
+            host: str = None,
+            style: str = None,
+            additional_instructions: str = None,
             ) -> PodcastGenerationDefinition:
         if target_locale is None:
             raise ValueError
+        if content_file_azure_blob_url is None and plain_text_content_file_path is None and base64_content_file_path is None:
+            raise ValueError("At least one content source must be provided")
 
-        create_request_body = PodcastGenerationDefinition(
+        create_request_body=PodcastGenerationDefinition(
             displayName="Generation Name",
-            description="Generation Description"
+            description="Generation Description",
+            locale=target_locale,
+            host=host,
+            content=PodcastContent(),
+            scriptGeneration=PodcastScriptGenerationConfig(
+                additionalInstructions=additional_instructions,
+                length=length,
+                style=style),
+            tts=PodcastTtsConfig(
+                voiceName=voice_name,
+                genderPreference=gender_preference,
+                multiTalkerVoiceSpeakerNames=multi_talker_voice_speaker_names),
         )
 
         # API also support proivde text directly, then not specify url argument, instead using the "text" argument as below:
         #   kind=ContentSourceKind.PlainText,
         #   text="your text content"
-        create_request_body.content = PodcastGenerationContent(
-            url=input_file_url,
-            kind=ContentSourceKind.AzureStorageBlobPublicUrl,
-        )
+        if content_file_azure_blob_url is not None:
+            create_request_body.content.kind=ContentSourceKind.AzureStorageBlobPublicUrl
+            create_request_body.content.url=content_file_azure_blob_url
+        elif plain_text_content_file_path is not None:
+           create_request_body.content.kind=ContentSourceKind.PlainText
+           with open(plain_text_content_file_path, 'r', encoding='utf-8') as f:
+                text_content = f.read()
+           create_request_body.content.text = text_content
+        elif base64_content_file_path is not None:
+            create_request_body.content.kind=ContentSourceKind.FileBase64
+            with open(base64_content_file_path, 'rb') as f:
+                base64_content = base64.b64encode(f.read()).decode('utf-8')
+            create_request_body.content.base64Text = base64_content
+            file_extension = os.path.splitext(base64_content_file_path)[1].lower()
+            if file_extension == '.pdf':
+                create_request_body.content.fileFormat = ContentFileFormatKind.Pdf
+            elif file_extension == '.txt':
+                create_request_body.content.fileFormat = ContentFileFormatKind.Txt
+            else:
+                raise ValueError(f"Unsupported file extension: {file_extension}. Only .pdf and .txt are supported for base64 content.")
+        else:
+            raise ValueError("At least one content source must be provided")
 
-        create_request_body.config = PodcastGenerationConfig(
-            locale=target_locale,
-        )
-
-        if focus is not None:
-            create_request_body.config.focus = focus
         return create_request_body
 
     def request_create_generation(

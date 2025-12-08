@@ -62,6 +62,34 @@ Run main.py with command in below pattern:
 | list  | Request list translations API |
 | delete  | Request delete translation API |
 
+## Arguments for create_generation_and_wait_until_terminated
+
+| Argument name | Required | Description |
+| --- | --- | --- |
+| --content_file_azure_blob_url | No | Input file url, supported formats are .pdf and .txt. The file should be publicly accessible or accessible with a SAS token. |
+| --plain_text_content_file_path | No | Path to a plain text file containing the podcast content, the file will be uploaded by Text property with plain text. If this argument is provided, the content will be read from the specified file instead of using a URL. |
+| --base64_content_file_path | No | Path to a file containing the base64-encoded content for the podcast, the file will be uploaded by Base64Text property with base64-encoded content. If this argument is provided, the content will be read from the specified file instead of using a URL. |
+| --target_locale | No | The locale of the podcast. Locale code follows BCP-47. You can find the text to speech locale list [here](https://learn.microsoft.com/azure/ai-services/speech-service/language-support?tabs=tts). |
+| --voice_name | No | The voice name to be used for TTS synthesis. You can find the voice name list [here](https://learn.microsoft.com/azure/ai-services/speech-service/voice-list?tabs=tts). |
+| --multi_talker_voice_speaker_names | No | The multi-talker voice speaker names, separated by comma, to be used for TTS synthesis. |
+| --gender_preference | No | Gender preference of the podcast voice. Possible values are Female/Male. |
+| --length | No | The length of the podcast. Possible values are VeryShort/Short/Medium/Long/VeryLong. |
+| --host | No | The host configuration of the podcast. Possible values are OneHost/TwoHosts. |
+| --style | No | The style of the podcast. Possible values are Default/Professional/Casual. |
+| --additional_instructions | No | The focus of the podcast, which can help guide the content generation. For example, you can specify "technology" or "health". |
+
+## Arguments for get
+
+| Argument name | Required | Description |
+| --- | --- | --- |
+| --id | Yes | Generation ID. |
+
+## Arguments for delete
+
+| Argument name | Required | Description |
+| --- | --- | --- |
+| --id | Yes | Generation ID. |
+
 ## HTTP client library
 Podcast client is defined as class PodcastClient in file [podcast_client.py](microsoft_client_podcast/podcast_client.py)
 ### Function definitions:

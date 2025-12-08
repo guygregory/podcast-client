@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PodcastSample", "PodcastSam
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PodcastLib.Public", "PodcastLib.Public\PodcastLib.Public\PodcastLib.Public.csproj", "{E830C51E-D24E-4241-9062-94424ED10BA6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PodcastLib.PublicBase", "PodcastLib.Public\PodcastLib.PublicBase\PodcastLib.PublicBase.csproj", "{75612CFA-238A-F325-3FDD-D54F218BBF8B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,6 +31,10 @@ Global
 		{E830C51E-D24E-4241-9062-94424ED10BA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E830C51E-D24E-4241-9062-94424ED10BA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E830C51E-D24E-4241-9062-94424ED10BA6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{75612CFA-238A-F325-3FDD-D54F218BBF8B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{75612CFA-238A-F325-3FDD-D54F218BBF8B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{75612CFA-238A-F325-3FDD-D54F218BBF8B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{75612CFA-238A-F325-3FDD-D54F218BBF8B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -36,6 +42,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{CD992473-B30A-126C-0789-DBA5D215ACC9} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{E830C51E-D24E-4241-9062-94424ED10BA6} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{75612CFA-238A-F325-3FDD-D54F218BBF8B} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {212E6634-01CF-4A88-95B0-CF152060C5FB}

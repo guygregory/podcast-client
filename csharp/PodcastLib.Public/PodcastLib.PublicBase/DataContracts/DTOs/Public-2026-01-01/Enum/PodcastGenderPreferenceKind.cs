@@ -5,11 +5,11 @@
 
 namespace Microsoft.SpeechServices.Cris.Http.DTOs.Public.Podcast.Public20260101Preview;
 
-public enum ContentSourceKind
+public enum PodcastGenderPreferenceKind
 {
     None = 0,
 
-    AzureStorageBlobPublicUrl,
+    Female,
 
-    Text,
+    Male,
 }

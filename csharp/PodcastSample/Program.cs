@@ -11,13 +11,15 @@ using Microsoft.SpeechServices.CommonLib.Public.Interface;
 using Microsoft.SpeechServices.Cris.Http.DTOs.Public.Podcast.Public20260101Preview;
 using Newtonsoft.Json;
 using System;
+using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
-internal class Program
+internal partial class Program
 {
-    static async Task<int> Main(string[] args)
+    public static async Task<int> Main(string[] args)
     {
         var types = LoadVerbs();
 
@@ -38,7 +40,7 @@ internal class Program
         return exitCode;
     }
 
-    static async Task<int> RunAndReturnExitCodeAsync(object options)
+    private static async Task<int> RunAndReturnExitCodeAsync(object options)
     {
         var optionsBase = options as BaseOptions;
         ArgumentNullException.ThrowIfNull(optionsBase);
@@ -53,7 +55,7 @@ internal class Program
         }
     }
 
-    static async Task<int> DoRunAndReturnExitCodeAsync(BaseOptions baseOptions)
+    private static async Task<int> DoRunAndReturnExitCodeAsync(BaseOptions baseOptions)
     {
         ArgumentNullException.ThrowIfNull(baseOptions);
         var regionConfig = new ApimApiRegionConfig(baseOptions.Region);
@@ -75,17 +77,38 @@ internal class Program
             case CreateGenerationAndWaitUntilTerminatedOptions options:
                 {
                     ContentSourceKind? kind = null;
-                    string text = null;
+                    string plainText = null;
+                    string base64Text = null;
                     Uri url = null;
-                    if (!string.IsNullOrEmpty(options.ContentFilePath))
-                    {
-                        kind = ContentSourceKind.Text;
-                        text = await File.ReadAllTextAsync(options.ContentFilePath).ConfigureAwait(false);
-                    }
-                    else if (!string.IsNullOrEmpty(options.ContentFileAzureBlobUrl?.OriginalString))
+                    ContentFileFormatKind? format = null;
+                    if (!string.IsNullOrEmpty(options.ContentFileAzureBlobUrl?.OriginalString))
                     {
                         kind = ContentSourceKind.AzureStorageBlobPublicUrl;
                         url = options.ContentFileAzureBlobUrl;
+                    }
+                    else if (!string.IsNullOrEmpty(options.PlainTextContentFilePath))
+                    {
+                        kind = ContentSourceKind.PlainText;
+                        plainText = await File.ReadAllTextAsync(options.PlainTextContentFilePath).ConfigureAwait(false);
+                    }
+                    else if (!string.IsNullOrEmpty(options.Base64ContentFilePath))
+                    {
+                        if (options.Base64ContentFilePath.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+                        {
+                            format = ContentFileFormatKind.Txt;
+                        }
+                        else if (options.Base64ContentFilePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                        {
+                            format = ContentFileFormatKind.Pdf;
+                        }
+                        else
+                        {
+                            throw new InvalidDataException($"Unsupported file format for base64 content file path: {options.Base64ContentFilePath}");
+                        }
+
+                        kind = ContentSourceKind.FileBase64;
+                        var bytes = await File.ReadAllBytesAsync(options.Base64ContentFilePath).ConfigureAwait(false);
+                        base64Text = Convert.ToBase64String(bytes);
                     }
                     else
                     {
@@ -98,17 +121,28 @@ internal class Program
                             Guid.NewGuid().ToString() : options.Id,
                         DisplayName = options.Id,
                         Description = options.Id,
+                        Locale = options.TargetLocale,
+                        Host = options.Host == PodcastHostKind.None ? null : options.Host,
                         Content = new PodcastGenerationContent()
                         {
                             Kind = kind.Value,
-                            Text = text,
+                            Text = plainText,
+                            Base64Text = base64Text,
+                            FileFormat = format,
                             Url = url,
                         },
-                        Config = new PodcastGenerationConfig()
+                        ScriptGeneration = new PodcastScriptGenerationConfig()
                         {
-                            Locale = options.TargetLocale,
-                            Focus = options.Focus,
-                        }
+                            AdditionalInstructions = options.AdditionalInstructions,
+                            Length = options.Length == PodcastLengthKind.None ? null : options.Length,
+                            Style = options.Style == PodcastStyleKind.Default ? null : options.Style,
+                        },
+                        Tts = new PodcastTtsConfig()
+                        {
+                            VoiceName = options.VoiceName,
+                            MultiTalkerVoiceSpeakerNames = options.MultiTalkerVoiceSpeakerNames,
+                            GenderPreference = options.GenderPreference == PodcastGenderPreferenceKind.None ? null : options.GenderPreference,
+                        },
                     };
 
                     generation = await generationClient.CreateGenerationAndWaitUntilTerminatedAsync(

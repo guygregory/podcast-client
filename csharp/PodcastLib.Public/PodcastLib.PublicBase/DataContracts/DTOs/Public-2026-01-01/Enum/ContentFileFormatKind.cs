@@ -5,12 +5,11 @@
 
 namespace Microsoft.SpeechServices.Cris.Http.DTOs.Public.Podcast.Public20260101Preview;
 
-using System.ComponentModel.DataAnnotations;
-using System.Globalization;
-
-public class PodcastGenerationConfig
+public enum ContentFileFormatKind
 {
-    public CultureInfo Locale { get; set; }
+    None = 0,
 
-    public string Focus { get; set; }
+    Txt,
+
+    Pdf,
 }
