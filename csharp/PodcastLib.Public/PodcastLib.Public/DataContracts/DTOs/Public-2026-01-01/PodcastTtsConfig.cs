@@ -5,18 +5,14 @@
 
 namespace Microsoft.SpeechServices.Cris.Http.DTOs.Public.Podcast.Public20260101Preview;
 
-using System;
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 
-public class PodcastGenerationContent
+public partial class PodcastTtsConfig
 {
-    public Uri Url { get; set; }
+    public string VoiceName { get; set; }
 
-    public string Text { get; set; }
+    public PodcastGenderPreferenceKind? GenderPreference { get; set; }
 
-    public string Base64Text { get; set; }
-
-    public ContentSourceKind? Kind { get; set; }
-
-    public ContentFileFormatKind? FileFormat { get; set; }
+    public string MultiTalkerVoiceSpeakerNames { get; set; }
 }

@@ -12,7 +12,7 @@ from microsoft_speech_client_common.client_common_enum import (
 )
 
 from microsoft_client_podcast.podcast_enum import (
-    ContentSourceKind
+    ContentFileFormatKind, ContentSourceKind, PodcastHostKind, PodcastLengthKind, PodcastStyleKind, PodcastGenderPreferenceKind
 )
 
 from microsoft_speech_client_common.client_common_dataclass import (
@@ -21,26 +21,40 @@ from microsoft_speech_client_common.client_common_dataclass import (
 
 
 @dataclass(kw_only=True)
-class PodcastGenerationContent:
-    url: Url = None
-    text: str = None
+class PodcastContent:
+    url: Optional[Url] = None
+    text: Optional[str] = None
+    base64Text: Optional[str] = None
     kind: Optional[ContentSourceKind] = None
-
+    fileFormat: Optional[ContentFileFormatKind] = None
 
 @dataclass(kw_only=True)
-class PodcastGenerationConfig:
-    locale: locale
-    focus: Optional[str] = None
+class PodcastScriptGenerationConfig:
+    additionalInstructions: Optional[str] = None
+    length: Optional[PodcastLengthKind] = None
+    style: Optional[PodcastStyleKind] = None
 
 @dataclass(kw_only=True)
 class PodcastGenerationOutput:
     audioFileUrl: Url
 
 @dataclass(kw_only=True)
+class PodcastTtsConfig:
+    voiceName: str = None
+    genderPreference: Optional[PodcastGenderPreferenceKind] = None
+    multiTalkerVoiceSpeakerNames: str = None # for example: ava,steffan
+
+@dataclass(kw_only=True)
 class PodcastGenerationDefinition(StatefulResourceBaseDefinition):
-    content: PodcastGenerationContent = None
-    config: Optional[PodcastGenerationConfig] = None
+    displayName: Optional[str] = None
+    description: Optional[str] = None
+    locale: locale
+    host: Optional[PodcastHostKind] = None
+    content: PodcastContent = None
+    scriptGeneration: Optional[PodcastScriptGenerationConfig] = None
+    tts: Optional[PodcastTtsConfig] = None
     output: PodcastGenerationOutput = None
+    failureReason: Optional[str] = None
 
 @dataclass(kw_only=True)
 class PagedGenerationDefinition:

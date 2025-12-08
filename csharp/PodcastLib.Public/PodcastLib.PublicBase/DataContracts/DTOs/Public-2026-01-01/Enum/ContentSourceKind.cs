@@ -5,9 +5,13 @@
 
 namespace Microsoft.SpeechServices.Cris.Http.DTOs.Public.Podcast.Public20260101Preview;
 
-using System;
-
-public partial class PodcastGenerationOutput
+public enum ContentSourceKind
 {
-    public Uri AudioFileUrl { get; set; }
+    None = 0,
+
+    AzureStorageBlobPublicUrl,
+
+    PlainText,
+
+    FileBase64,
 }

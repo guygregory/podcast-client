@@ -5,9 +5,13 @@
 
 namespace Microsoft.SpeechServices.Cris.Http.DTOs.Public.Podcast.Public20260101Preview;
 
-using System;
-
-public partial class PodcastGenerationOutput
+// Put DTO enum in Common.Client due to it need be referenced DB properties to store user original input.
+public enum PodcastHostKind
 {
-    public Uri AudioFileUrl { get; set; }
+    None = 0,
+
+    OneHost,
+
+    // Default
+    TwoHosts,
 }

@@ -7,11 +7,12 @@ namespace Microsoft.SpeechServices.Podcast.ApiSampleCode;
 
 using CommandLine;
 using Microsoft.SpeechServices.CommonLib;
-using Microsoft.SpeechServices.Podcast.ApiSampleCode;
+using Microsoft.SpeechServices.Cris.Http.DTOs.Public.Podcast.Public20260101Preview;
+using System;
 using System.Globalization;
 
 [Verb("createGenerationAndWaitUntilTerminated", HelpText = "Create generation and wait until terminated.")]
-public class CreateGenerationAndWaitUntilTerminatedOptions : BaseOptions
+public partial class CreateGenerationAndWaitUntilTerminatedOptions : BaseOptions
 {
     [Option("id", Required = false, HelpText = PodcastPublicConst.ArgumentDescription.GenerationId)]
     public string Id { get; set; }
@@ -19,13 +20,36 @@ public class CreateGenerationAndWaitUntilTerminatedOptions : BaseOptions
     [Option("contentFileAzureBlobUrl", Required = false, HelpText = PodcastPublicConst.ArgumentDescription.ContentFileAzureBlobUrl)]
     public Uri ContentFileAzureBlobUrl { get; set; }
 
-    [Option("contentFilePath", Required = false, HelpText = PodcastPublicConst.ArgumentDescription.ContentFilePath)]
-    public string ContentFilePath { get; set; }
+    [Option("plainTextContentFilePath", Required = false, HelpText = PodcastPublicConst.ArgumentDescription.PlainTextContentFilePath)]
+    public string PlainTextContentFilePath { get; set; }
 
+    [Option("base64ContentFilePath", Required = false, HelpText = PodcastPublicConst.ArgumentDescription.Base64ContentFilePath)]
+    public string Base64ContentFilePath { get; set; }
+
+    // Not use CultureInfo due to it not support dialet like: zh-HeNan-CN
     [Option("targetLocale", Required = false, HelpText = PodcastPublicConst.ArgumentDescription.Locale)]
-    public CultureInfo TargetLocale { get; set; }
+    public string TargetLocale { get; set; }
 
-    [Option("focus", Required = false, HelpText = PodcastPublicConst.ArgumentDescription.Locale)]
-    public string Focus { get; set; }
+    [Option("voiceName", Required = false, HelpText = PodcastPublicConst.ArgumentDescription.VoiceName)]
+    public string VoiceName { get; set; }
+
+    [Option("multiTalkerVoiceSpeakerNames", Required = false, HelpText = PodcastPublicConst.ArgumentDescription.MultiTalkerVoiceSpeakerNames)]
+    public string MultiTalkerVoiceSpeakerNames { get; set; }
+
+    [Option("genderPreference", Required = false, Default = PodcastGenderPreferenceKind.None, HelpText = PodcastPublicConst.ArgumentDescription.GenderPreference)]
+    public PodcastGenderPreferenceKind GenderPreference { get; set; }
+
+    [Option("length", Required = false, Default = PodcastLengthKind.None, HelpText = PodcastPublicConst.ArgumentDescription.Length)]
+    public PodcastLengthKind Length { get; set; }
+
+    [Option("host", Required = false, Default = PodcastHostKind.None,
+    HelpText = PodcastPublicConst.ArgumentDescription.Host)]
+    public PodcastHostKind Host { get; set; }
+
+    [Option("style", Required = false, Default = PodcastStyleKind.Default, HelpText = PodcastPublicConst.ArgumentDescription.Style)]
+    public PodcastStyleKind Style { get; set; }
+
+    [Option("additionalInstructions", Required = false, HelpText = PodcastPublicConst.ArgumentDescription.AdditionalInstructions)]
+    public string AdditionalInstructions { get; set; }
 }
 

@@ -22,7 +22,8 @@ public class ApimApiRegionConfig : IRegionConfig
     {
         get
         {
-            if (this.RegionIdentifier.StartsWith("https", StringComparison.OrdinalIgnoreCase))
+            if (this.RegionIdentifier.StartsWith("http", StringComparison.OrdinalIgnoreCase) ||
+                this.This.IsLocal)
             {
                 return new Uri(this.RegionIdentifier);
             }
@@ -34,4 +35,6 @@ public class ApimApiRegionConfig : IRegionConfig
     }
 
     private string HostName => $"{this.RegionIdentifier}.api.cognitive.microsoft.com";
+
+    private IRegionConfig This => this;
 }
