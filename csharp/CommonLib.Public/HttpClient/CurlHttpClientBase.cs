@@ -5,43 +5,44 @@
 
 using Flurl.Http;
 using Flurl.Util;
-using Microsoft.SpeechServices.CommonLib.HttpClient;
 using Microsoft.SpeechServices.Cris.Http.DTOs.Public;
 using Microsoft.SpeechServices.DataContracts;
 using Newtonsoft.Json;
 using System;
-using System.IO;
+using System.Globalization;
 using System.Net;
 using System.Threading.Tasks;
 
 namespace Microsoft.SpeechServices.CommonLib.Util;
 
 public abstract class CurlHttpClientBase<TDto> : HttpClientBase
-    where TDto : StatefulResourceBase
+    where TDto : ResourceBase
 {
     public CurlHttpClientBase(HttpClientConfigBase config)
         : base(config)
     {
     }
 
-    protected async Task<(TDto response, IReadOnlyNameValueList<string> headers)> CreateDtoAsync(
+    protected async Task<(TDto response, IReadOnlyNameValueList<string> headers)> CreateDtoWithOperationAsync(
         TDto dto,
         string operationId)
     {
         ArgumentNullException.ThrowIfNull(dto);
-        var (responseString, headers) = await CreateDtoWithStringResponseAsync(
+        var (responseString, headers) = await CreateDtoWithOperationAndStringResponseAsync(
             dto: dto,
             operationId: operationId).ConfigureAwait(false);
         var typedResponse = JsonConvert.DeserializeObject<TDto>(responseString);
         return (typedResponse, headers);
     }
 
-    protected async Task<(string responseString, IReadOnlyNameValueList<string> headers)> CreateDtoWithStringResponseAsync(
+    protected async Task<(string responseString,
+        IReadOnlyNameValueList<string> headers)>
+    CreateDtoWithOperationAndStringResponseAsync(
         TDto dto,
         string operationId)
     {
         ArgumentNullException.ThrowIfNull(dto);
-        var responseTask = CreateDtoWithResponseAsync(
+        var responseTask = CreateDtoWithOperationIdAndResponseAsync(
             dto: dto,
             operationId: operationId);
         var response = await responseTask.ConfigureAwait(false);
@@ -50,34 +51,27 @@ public abstract class CurlHttpClientBase<TDto> : HttpClientBase
         return (stringResponse, response.Headers);
     }
 
-    protected async Task<TDto> CreateDtoAndWaitUntilTerminatedAsync(
-        TDto dto)
-    {
-        Console.WriteLine($"Creating resource {dto.Id} :");
-
-        var operationId = Guid.NewGuid().ToString();
-        var (response, createResponseHeaders) = await CreateDtoAsync(
-            dto: dto,
-            operationId: operationId).ConfigureAwait(false);
-        ArgumentNullException.ThrowIfNull(response);
-
-        if (!createResponseHeaders.TryGetFirst(CommonPublicConst.Http.Headers.OperationLocation, out var operationLocation) ||
-            string.IsNullOrEmpty(operationLocation))
-        {
-            throw new InvalidDataException($"Missing header {CommonPublicConst.Http.Headers.OperationLocation} in headers");
-        }
-
-        var operationClient = new OperationClient(this.SpeechConfig);
-
-        await operationClient.QueryOperationUntilTerminateAsync(new Uri(operationLocation)).ConfigureAwait(false);
-
-        return await GetTypedDtoAsync(
-            translationId: response.Id).ConfigureAwait(false);
-    }
-
-    protected async Task<PaginatedResources<TDto>> ListTypedDtosAsync()
+    protected async Task<PaginatedResources<TDto>> ListTypedDtosAsync(
+        int? top = null,
+        int? skip = null,
+        int? maxPageSize = null)
     {
         var url = await this.BuildRequestBaseAsync().ConfigureAwait(false);
+        if (top != null)
+        {
+            url = url.SetQueryParam("top", top.Value.ToString(CultureInfo.InvariantCulture));
+        }
+
+        if (skip != null)
+        {
+            url = url.SetQueryParam("skip", skip.Value.ToString(CultureInfo.InvariantCulture));
+        }
+
+        if (maxPageSize != null)
+        {
+            // maxpagesize is case sensitive.
+            url = url.SetQueryParam("maxpagesize", maxPageSize.Value.ToString(CultureInfo.InvariantCulture));
+        }
 
         return await RequestWithRetryAsync(async () =>
         {
@@ -133,7 +127,7 @@ public abstract class CurlHttpClientBase<TDto> : HttpClientBase
         }).ConfigureAwait(false);
     }
 
-    private async Task<IFlurlResponse> CreateDtoWithResponseAsync(
+    private async Task<IFlurlResponse> CreateDtoWithOperationIdAndResponseAsync(
         TDto dto,
         string operationId)
     {

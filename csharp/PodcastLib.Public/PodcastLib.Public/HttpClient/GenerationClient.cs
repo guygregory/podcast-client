@@ -11,7 +11,7 @@ using Microsoft.SpeechServices.Cris.Http.DTOs.Public.Podcast.Public20260101Previ
 using Microsoft.SpeechServices.DataContracts;
 using System.Threading.Tasks;
 
-public class GenerationClient : CurlHttpClientBase<PodcastGeneration>
+public class GenerationClient : CurlHttpStatefulClientBase<PodcastGeneration>
 {
     public GenerationClient(HttpSpeechClientConfigBase config)
         : base(config)
@@ -30,9 +30,15 @@ public class GenerationClient : CurlHttpClientBase<PodcastGeneration>
         return await this.GetTypedDtoAsync(generationId);
     }
 
-    public async Task<PaginatedResources<PodcastGeneration>> ListGenerationsAsync()
+    public async Task<PaginatedResources<PodcastGeneration>> ListGenerationsAsync(
+        int? top = null,
+        int? skip = null,
+        int? maxPageSize = null)
     {
-        return await this.ListTypedDtosAsync().ConfigureAwait(false);
+        return await this.ListTypedDtosAsync(
+            top: top,
+            skip: skip,
+            maxPageSize: maxPageSize).ConfigureAwait(false);
     }
 
     public async Task<PodcastGeneration> CreateGenerationAndWaitUntilTerminatedAsync(

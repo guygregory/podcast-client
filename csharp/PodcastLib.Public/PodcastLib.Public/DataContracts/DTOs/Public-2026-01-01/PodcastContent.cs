@@ -8,7 +8,7 @@ namespace Microsoft.SpeechServices.Cris.Http.DTOs.Public.Podcast.Public20260101P
 using System;
 using System.ComponentModel.DataAnnotations;
 
-public class PodcastGenerationContent
+public class PodcastContent
 {
     public Uri Url { get; set; }
 
@@ -16,7 +16,10 @@ public class PodcastGenerationContent
 
     public string Base64Text { get; set; }
 
-    public ContentSourceKind? Kind { get; set; }
+    public string TempFileId { get; set; }
 
     public ContentFileFormatKind? FileFormat { get; set; }
+
+    // TODO: Delete after 2026/1/19
+    // public string Kind { get; set; }
 }

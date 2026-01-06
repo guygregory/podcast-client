@@ -1,0 +1,117 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "create_generation_and_wait_until_terminated",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/main_podcast.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--region", "eastus",
+                "--sub_key", "[sub_key]",
+                "--api_version", "[api_version]",
+                "create_generation_and_wait_until_terminated",
+                "--target_locale", "en-US",
+                "--input_file_url", "[input_file_url]"
+            ]
+        },
+        {
+            "name": "get",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/main_podcast.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--region", "eastus",
+                "--sub_key", "[sub_key]",
+                "--api_version", "[api_version]",
+                "get",
+                "--translation_id", "[translation_id]"
+            ]
+        },
+        {
+            "name": "list",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/main_podcast.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--region", "eastus",
+                "--sub_key", "[sub_key]",
+                "--api_version", "[api_version]",
+                "list"
+            ]
+        },
+        {
+            "name": "delete",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/main_podcast.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--region", "eastus",
+                "--sub_key", "[sub_key]",
+                "--api_version", "[api_version]",
+                "delete",
+                "--generation_id", "[translation_id]"
+            ]
+        },
+        {
+            "name": "temp-file-create",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/main_podcast.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--region", "eastus",
+                "--sub_key", "[sub_key]",
+                "--api_version", "2026-01-01-preview",
+                "upload_temp_file",
+                "--expires_after_in_mins", "120",
+                "--file_path", "[your_temp_file_path]"
+            ]
+        },
+        {
+            "name": "temp-file-get",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/main_podcast.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--region", "eastus",
+                "--sub_key", "[sub_key]",
+                "--api_version", "2026-01-01-preview",
+                "get_temp_file",
+                "--id", "[your_temp_file_id]"
+            ]
+        },
+        {
+            "name": "temp-file-list",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/main_podcast.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--region", "eastus",
+                "--sub_key", "[sub_key]",
+                "--api_version", "2026-01-01-preview",
+                "list_temp_files"
+            ]
+        },
+        {
+            "name": "temp-file-delete",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/main_podcast.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--region", "eastus",
+                "--sub_key", "[sub_key]",
+                "--api_version", "2026-01-01-preview",
+                "delete_temp_file",
+                "--id", "[your_temp_file_id]"
+            ]
+        }
+    ]
+}

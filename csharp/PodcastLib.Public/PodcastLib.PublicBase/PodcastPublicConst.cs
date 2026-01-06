@@ -7,15 +7,25 @@ namespace Microsoft.SpeechServices.CommonLib;
 
 public static class PodcastPublicConst
 {
+    public static class DataValidation
+    {
+        public const int MaxPlainTextLength = 1024 * 1024;
+
+        // For 8M base64(about 5M pdf) can handle 80% of real world pdf.
+        public const int MaxBaser64TextLength = 8 * 1024 * 1024;
+        public const int MaxContentFileSize = 50 * 1024 * 1025;
+        public const int AdditionalInstructionsMaxLength = 200;
+
+        public const long MaxExpiresAfterInMins = 60 * 24;
+    }
+
     public static class ArgumentDescription
     {
         public const string GenerationId = "Specify generation ID.";
 
-        public const string ContentFileAzureBlobUrl = "Content file Azure blob URL, this parameter is conflict with PlainTextContentFilePath and Base64ContentFilePath.";
+        public const string ContentFileAzureBlobUrl = "Content file Azure blob URL, this parameter is conflict with ContentFilePath.";
 
-        public const string PlainTextContentFilePath = "Plain text content file path, this parameter is conflict with ContentFileAzureBlobUrl and Base64ContentFilePath.";
-
-        public const string Base64ContentFilePath = "Plain text content file path, this parameter is conflict with ContentFileAzureBlobUrl and PlainTextContentFilePath.";
+        public const string ContentFilePath = "Content file path, this parameter is conflict with ContentFileAzureBlobUrl.";
 
         public const string Locale = "Podcast target generated podcast locale.";
 

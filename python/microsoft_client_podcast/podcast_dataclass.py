@@ -25,6 +25,8 @@ class PodcastContent:
     url: Optional[Url] = None
     text: Optional[str] = None
     base64Text: Optional[str] = None
+    tempFileId: Optional[str] = None
+    # TODO: Delete after 2026/1/19
     kind: Optional[ContentSourceKind] = None
     fileFormat: Optional[ContentFileFormatKind] = None
 
@@ -61,3 +63,15 @@ class PagedGenerationDefinition:
     value: list[PodcastGenerationDefinition]
     nextLink: Optional[Url] = None
 
+@dataclass(kw_only=True)
+class TempFile:
+    id: str
+    name: Optional[str] = None
+    createdDateTime: Optional[datetime] = None
+    expiresDateTime: Optional[datetime] = None
+    sizeInBytes: Optional[int] = None
+
+@dataclass(kw_only=True)
+class PagedTempFileDefinition:
+    value: list[TempFile]
+    nextLink: Optional[Url] = None

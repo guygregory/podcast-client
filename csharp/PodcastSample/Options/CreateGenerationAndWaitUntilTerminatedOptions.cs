@@ -20,11 +20,8 @@ public partial class CreateGenerationAndWaitUntilTerminatedOptions : BaseOptions
     [Option("contentFileAzureBlobUrl", Required = false, HelpText = PodcastPublicConst.ArgumentDescription.ContentFileAzureBlobUrl)]
     public Uri ContentFileAzureBlobUrl { get; set; }
 
-    [Option("plainTextContentFilePath", Required = false, HelpText = PodcastPublicConst.ArgumentDescription.PlainTextContentFilePath)]
-    public string PlainTextContentFilePath { get; set; }
-
-    [Option("base64ContentFilePath", Required = false, HelpText = PodcastPublicConst.ArgumentDescription.Base64ContentFilePath)]
-    public string Base64ContentFilePath { get; set; }
+    [Option("contentFilePath", Required = false, HelpText = PodcastPublicConst.ArgumentDescription.ContentFilePath)]
+    public string ContentFilePath { get; set; }
 
     // Not use CultureInfo due to it not support dialet like: zh-HeNan-CN
     [Option("targetLocale", Required = false, HelpText = PodcastPublicConst.ArgumentDescription.Locale)]
@@ -35,6 +32,12 @@ public partial class CreateGenerationAndWaitUntilTerminatedOptions : BaseOptions
 
     [Option("multiTalkerVoiceSpeakerNames", Required = false, HelpText = PodcastPublicConst.ArgumentDescription.MultiTalkerVoiceSpeakerNames)]
     public string MultiTalkerVoiceSpeakerNames { get; set; }
+
+    [Option("uploadWithTempFile", Required = false, HelpText = "Upload with temp file.")]
+    public bool UploadWithTempFile { get; set; }
+
+    [Option("tempFileId", Required = false, HelpText = "Temp file ID of input content file.")]
+    public string TempFileId { get; set; }
 
     [Option("genderPreference", Required = false, Default = PodcastGenderPreferenceKind.None, HelpText = PodcastPublicConst.ArgumentDescription.GenderPreference)]
     public PodcastGenderPreferenceKind GenderPreference { get; set; }

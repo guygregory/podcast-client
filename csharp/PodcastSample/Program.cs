@@ -5,7 +5,9 @@
 
 namespace Microsoft.SpeechServices.Podcast.ApiSampleCode;
 
+using Azure;
 using CommandLine;
+using Flurl.Http;
 using Microsoft.SpeechServices.CommonLib;
 using Microsoft.SpeechServices.CommonLib.Public.Interface;
 using Microsoft.SpeechServices.Cris.Http.DTOs.Public.Podcast.Public20260101Preview;
@@ -71,89 +73,189 @@ internal partial class Program
         };
 
         var generationClient = new GenerationClient(httpConfig);
+        var tempFileClient = new TempFileClient(httpConfig);
 
         switch (baseOptions)
         {
+            case UploadTempFileOptions options:
+                {
+                    var responseString = await tempFileClient.UploadTempFileAsync(
+                        options.FilePath,
+                        options.ExpiresAfterInMins == 0 ? null : options.ExpiresAfterInMins)
+                        .ReceiveString().ConfigureAwait(false);
+                    Console.WriteLine(responseString);
+                    break;
+                }
+
+            case ListTempFilesOptions options:
+                {
+                    var tempFiles = await tempFileClient.ListTempFilesAsync(
+                        top: 2,
+                        skip: 1,
+                        maxPageSize: 2).ConfigureAwait(false);
+                    Console.WriteLine(JsonConvert.SerializeObject(
+                        tempFiles,
+                        Formatting.Indented,
+                        CommonPublicConst.Json.WriterSettings));
+                    break;
+                }
+
+            case GetTempFileOptions options:
+                {
+                    var tempFile = await tempFileClient.GetTempFileAsync(options.Id).ConfigureAwait(false);
+                    Console.WriteLine(JsonConvert.SerializeObject(
+                        tempFile,
+                        Formatting.Indented,
+                        CommonPublicConst.Json.WriterSettings));
+                    break;
+                }
+
+            case DeleteTempFileOptions options:
+                {
+                    var response = await tempFileClient.DeleteTempFileAsync(options.Id).ConfigureAwait(false);
+                    Console.WriteLine(response.StatusCode);
+                    Console.WriteLine(JsonConvert.SerializeObject(
+                        await response.GetStringAsync().ConfigureAwait(false),
+                        Formatting.Indented,
+                        CommonPublicConst.Json.WriterSettings));
+                    break;
+                }
+
             case CreateGenerationAndWaitUntilTerminatedOptions options:
                 {
-                    ContentSourceKind? kind = null;
                     string plainText = null;
                     string base64Text = null;
+                    string tempFileId = null;
                     Uri url = null;
                     ContentFileFormatKind? format = null;
+                    var uploadByTempFile = false;
+
                     if (!string.IsNullOrEmpty(options.ContentFileAzureBlobUrl?.OriginalString))
                     {
-                        kind = ContentSourceKind.AzureStorageBlobPublicUrl;
                         url = options.ContentFileAzureBlobUrl;
                     }
-                    else if (!string.IsNullOrEmpty(options.PlainTextContentFilePath))
+                    else if (!string.IsNullOrWhiteSpace(options.TempFileId))
                     {
-                        kind = ContentSourceKind.PlainText;
-                        plainText = await File.ReadAllTextAsync(options.PlainTextContentFilePath).ConfigureAwait(false);
+                        tempFileId = options.TempFileId;
                     }
-                    else if (!string.IsNullOrEmpty(options.Base64ContentFilePath))
+                    else if (!string.IsNullOrEmpty(options.ContentFilePath))
                     {
-                        if (options.Base64ContentFilePath.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+                        if (options.UploadWithTempFile)
                         {
-                            format = ContentFileFormatKind.Txt;
+                            uploadByTempFile = true;
                         }
-                        else if (options.Base64ContentFilePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                        else if (options.ContentFilePath.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var filePlainText = await File.ReadAllTextAsync(options.ContentFilePath).ConfigureAwait(false);
+                            if ((filePlainText?.Length ?? 0) <= PodcastPublicConst.DataValidation.MaxPlainTextLength)
+                            {
+                                plainText = filePlainText;
+                            }
+                            else
+                            {
+                                uploadByTempFile = true;
+                            }
+                        }
+                        else if (options.ContentFilePath.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
                         {
                             format = ContentFileFormatKind.Pdf;
+                            var bytes = await File.ReadAllBytesAsync(options.ContentFilePath).ConfigureAwait(false);
+                            if (bytes.Length <= PodcastPublicConst.DataValidation.MaxBaser64TextLength)
+                            {
+                                var fileBase64Text = Convert.ToBase64String(bytes);
+                                if (fileBase64Text.Length <= PodcastPublicConst.DataValidation.MaxBaser64TextLength)
+                                {
+                                    base64Text = fileBase64Text;
+                                }
+                            }
+
+                            if (string.IsNullOrWhiteSpace(base64Text) &&
+                                bytes.Length <= PodcastPublicConst.DataValidation.MaxContentFileSize)
+                            {
+                                uploadByTempFile = true;
+                            }
+                            else
+                            {
+                                throw new NotSupportedException($"Input content file too large, should not exceed exceed 50MB.");
+                            }
                         }
                         else
                         {
-                            throw new InvalidDataException($"Unsupported file format for base64 content file path: {options.Base64ContentFilePath}");
+                            throw new InvalidDataException($"Unsupported file format for content file path: {options.ContentFilePath}");
                         }
 
-                        kind = ContentSourceKind.FileBase64;
-                        var bytes = await File.ReadAllBytesAsync(options.Base64ContentFilePath).ConfigureAwait(false);
-                        base64Text = Convert.ToBase64String(bytes);
+                        if (uploadByTempFile)
+                        {
+                            Console.WriteLine($"Uploading content file: {options.ContentFilePath}");
+                            var response = await tempFileClient.UploadTempFileAsync(
+                                localFilePath: options.ContentFilePath,
+                                expiresAfterInMins: (int)TimeSpan.FromHours(2).TotalMinutes)
+                                .ReceiveJson<TempFile>().ConfigureAwait(false);
+                            Console.WriteLine(JsonConvert.SerializeObject(
+                                response,
+                                Formatting.Indented,
+                                CommonPublicConst.Json.WriterSettings));
+                            Console.WriteLine($"Succesfully uploaded content file!");
+                            tempFileId = response.Id;
+                        }
                     }
                     else
                     {
                         throw new InvalidDataException($"Please specify contentLocalFilePath or contentFileAzureBlobUrl");
                     }
 
-                    var generation = new PodcastGeneration()
+                    try
                     {
-                        Id = string.IsNullOrWhiteSpace(options.Id) ?
-                            Guid.NewGuid().ToString() : options.Id,
-                        DisplayName = options.Id,
-                        Description = options.Id,
-                        Locale = options.TargetLocale,
-                        Host = options.Host == PodcastHostKind.None ? null : options.Host,
-                        Content = new PodcastGenerationContent()
+                        var generation = new PodcastGeneration()
                         {
-                            Kind = kind.Value,
-                            Text = plainText,
-                            Base64Text = base64Text,
-                            FileFormat = format,
-                            Url = url,
-                        },
-                        ScriptGeneration = new PodcastScriptGenerationConfig()
-                        {
-                            AdditionalInstructions = options.AdditionalInstructions,
-                            Length = options.Length == PodcastLengthKind.None ? null : options.Length,
-                            Style = options.Style == PodcastStyleKind.Default ? null : options.Style,
-                        },
-                        Tts = new PodcastTtsConfig()
-                        {
-                            VoiceName = options.VoiceName,
-                            MultiTalkerVoiceSpeakerNames = options.MultiTalkerVoiceSpeakerNames,
-                            GenderPreference = options.GenderPreference == PodcastGenderPreferenceKind.None ? null : options.GenderPreference,
-                        },
-                    };
+                            Id = string.IsNullOrWhiteSpace(options.Id) ?
+                                Guid.NewGuid().ToString() : options.Id,
+                            DisplayName = options.Id,
+                            Description = options.Id,
+                            Locale = options.TargetLocale,
+                            Host = options.Host == PodcastHostKind.None ? null : options.Host,
+                            Content = new PodcastContent()
+                            {
+                                TempFileId = tempFileId,
+                                Text = plainText,
+                                Base64Text = base64Text,
+                                FileFormat = format,
+                                Url = url,
+                            },
+                            ScriptGeneration = new PodcastScriptGenerationConfig()
+                            {
+                                AdditionalInstructions = options.AdditionalInstructions,
+                                Length = options.Length == PodcastLengthKind.None ? null : options.Length,
+                                Style = options.Style == PodcastStyleKind.Default ? null : options.Style,
+                            },
+                            Tts = new PodcastTtsConfig()
+                            {
+                                VoiceName = options.VoiceName,
+                                MultiTalkerVoiceSpeakerNames = options.MultiTalkerVoiceSpeakerNames,
+                                GenderPreference = options.GenderPreference == PodcastGenderPreferenceKind.None ? null : options.GenderPreference,
+                            },
+                        };
 
-                    generation = await generationClient.CreateGenerationAndWaitUntilTerminatedAsync(
-                        generation: generation).ConfigureAwait(false);
+                        generation = await generationClient.CreateGenerationAndWaitUntilTerminatedAsync(
+                            generation: generation).ConfigureAwait(false);
 
-                    Console.WriteLine();
-                    Console.WriteLine("Created generation:");
-                    Console.WriteLine(JsonConvert.SerializeObject(
-                        generation,
-                        Formatting.Indented,
-                        CommonPublicConst.Json.WriterSettings));
+                        Console.WriteLine();
+                        Console.WriteLine("Created generation:");
+                        Console.WriteLine(JsonConvert.SerializeObject(
+                            generation,
+                            Formatting.Indented,
+                            CommonPublicConst.Json.WriterSettings));
+                    }
+                    finally
+                    {
+                        if (!string.IsNullOrWhiteSpace(tempFileId) && uploadByTempFile)
+                        {
+                            Console.WriteLine($"Deleting temp file with ID: {tempFileId}");
+                            var response = await tempFileClient.DeleteTempFileAsync(tempFileId).ConfigureAwait(false);
+                            Console.WriteLine($"Succesfully deleted temp file with response status code {response.StatusCode}!");
+                        }
+                    }
+
                     break;
                 }
 

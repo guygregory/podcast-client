@@ -5,9 +5,8 @@
 
 namespace Microsoft.SpeechServices.Cris.Http.DTOs.Public.Podcast.Public20260101Preview;
 
-using System;
-
-public partial class PodcastGenerationOutput
+public class TempFileCreation
 {
-    public Uri AudioFileUrl { get; set; }
+    // Supported range from 1 to maximum value is 1440 (1 day)
+    public int? ExpiresAfterInMins { get; set; }
 }
