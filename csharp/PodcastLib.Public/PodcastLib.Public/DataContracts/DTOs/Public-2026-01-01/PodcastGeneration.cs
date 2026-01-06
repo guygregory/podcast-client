@@ -19,9 +19,9 @@ public partial class PodcastGeneration : StatefulResourceBase
 
     public PodcastTtsConfig Tts { get; set; }
 
-    public PodcastGenerationOutput Output { get; set; }
+    public PodcastOutput Output { get; set; }
 
-    public PodcastGenerationContent Content { get; set; }
+    public PodcastContent Content { get; set; }
 
     public string FailureReason { get; set; }
 }

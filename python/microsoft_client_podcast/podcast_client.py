@@ -28,7 +28,11 @@ from microsoft_client_podcast.podcast_enum import (
 from microsoft_client_podcast.podcast_dataclass import (
     ContentSourceKind,
     PodcastScriptGenerationConfig,
-
+)
+from microsoft_client_podcast.podcast_const import (
+    MAX_PLAIN_TEXT_LENGTH,
+    MAX_BASE64_TEXT_LENGTH,
+    MAX_CONTENT_FILE_SIZE,
 )
 from microsoft_speech_client_common.client_common_dataclass import (
     OperationDefinition
@@ -65,8 +69,8 @@ class PodcastClient(SpeechLongRunningTaskClientBase):
         self,
         target_locale: locale,
         content_file_azure_blob_url: Url,
-        plain_text_content_file_path: str = None,
-        base64_content_file_path: str = None,
+        content_file_path: str = None,
+        content_file_temp_file_id: str = None,
         voice_name: str = None,
         multi_talker_voice_speaker_names: str = None,
         gender_preference: str = None,
@@ -77,17 +81,17 @@ class PodcastClient(SpeechLongRunningTaskClientBase):
     ) -> tuple[bool, str, PodcastGenerationDefinition]:
         if target_locale is None:
             raise ValueError("Target locale must be provided")
-        if content_file_azure_blob_url is None and plain_text_content_file_path is None and base64_content_file_path is None:
+        if content_file_azure_blob_url is None and content_file_path is None:
             raise ValueError("At least one content source must be provided")
-        
+
         now = datetime.now()
         nowString = now.strftime("%m%d%Y%H%M%S")
         generation_id = f"{nowString}_{target_locale}"
 
         request_body = self.create_generation_creation_body(
             content_file_azure_blob_url=content_file_azure_blob_url,
-            plain_text_content_file_path=plain_text_content_file_path,
-            base64_content_file_path=base64_content_file_path,
+            content_file_path=content_file_path,
+            content_file_temp_file_id = content_file_temp_file_id,
             target_locale=target_locale,
             voice_name=voice_name,
             multi_talker_voice_speaker_names=multi_talker_voice_speaker_names,
@@ -160,8 +164,8 @@ class PodcastClient(SpeechLongRunningTaskClientBase):
             self,
             target_locale: locale,
             content_file_azure_blob_url: Url,
-            plain_text_content_file_path: str = None,
-            base64_content_file_path: str = None,
+            content_file_path: str = None,
+            content_file_temp_file_id: str = None,
             voice_name: str = None,
             multi_talker_voice_speaker_names: str = None,
             gender_preference: str = None,
@@ -172,7 +176,7 @@ class PodcastClient(SpeechLongRunningTaskClientBase):
             ) -> PodcastGenerationDefinition:
         if target_locale is None:
             raise ValueError
-        if content_file_azure_blob_url is None and plain_text_content_file_path is None and base64_content_file_path is None:
+        if content_file_azure_blob_url is None and content_file_path is None and content_file_temp_file_id is None:
             raise ValueError("At least one content source must be provided")
 
         create_request_body=PodcastGenerationDefinition(
@@ -197,21 +201,36 @@ class PodcastClient(SpeechLongRunningTaskClientBase):
         if content_file_azure_blob_url is not None:
             create_request_body.content.kind=ContentSourceKind.AzureStorageBlobPublicUrl
             create_request_body.content.url=content_file_azure_blob_url
-        elif plain_text_content_file_path is not None:
-           create_request_body.content.kind=ContentSourceKind.PlainText
-           with open(plain_text_content_file_path, 'r', encoding='utf-8') as f:
-                text_content = f.read()
-           create_request_body.content.text = text_content
-        elif base64_content_file_path is not None:
-            create_request_body.content.kind=ContentSourceKind.FileBase64
-            with open(base64_content_file_path, 'rb') as f:
-                base64_content = base64.b64encode(f.read()).decode('utf-8')
-            create_request_body.content.base64Text = base64_content
+        elif content_file_temp_file_id is not None:
+            create_request_body.content.tempFileId = content_file_temp_file_id
+        elif content_file_path is not None:
             file_extension = os.path.splitext(base64_content_file_path)[1].lower()
-            if file_extension == '.pdf':
+            if file_extension == '.txt':
+                with open(plain_text_content_file_path, 'r', encoding='utf-8') as f:
+                    text_content = f.read()
+                    if (len(text_content) <= MAX_PLAIN_TEXT_LENGTH):
+                        create_request_body.content.kind=ContentSourceKind.PlainText
+                        create_request_body.content.fileFormat = ContentFileFormatKind.Txt
+                        create_request_body.content.text = text_content
+                    else:
+                        raise ValueError("Please upload by temp file.")
+            elif file_extension == '.pdf':
                 create_request_body.content.fileFormat = ContentFileFormatKind.Pdf
-            elif file_extension == '.txt':
-                create_request_body.content.fileFormat = ContentFileFormatKind.Txt
+                with open(base64_content_file_path, 'rb') as f:
+                    file_binary = f.read()
+                    if len(file_binary) <= MAX_BASE64_TEXT_LENGTH:
+                        base64_content = base64.b64encode(file_binary).decode('utf-8')
+                        if (len(base64_content) <= MAX_BASE64_TEXT_LENGTH):
+                            create_request_body.content.kind = ContentSourceKind.FileBase64
+                            create_request_body.content.base64Text = base64_content
+                        else:
+                            raise ValueError("Input content file too large, should not exceed exceed 50M.")
+                    else:
+                        raise ValueError("Input content file too large, should not exceed exceed 50M.")
+                    if len(base64_content) == 0 and len(file_binary) <= MAX_CONTENT_FILE_SIZE:
+                        raise ValueError("Please upload by temp file.")
+                    else:
+                        raise ValueError("Input content file too large, should not exceed exceed 50M.")
             else:
                 raise ValueError(f"Unsupported file extension: {file_extension}. Only .pdf and .txt are supported for base64 content.")
         else:
