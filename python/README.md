@@ -70,7 +70,7 @@ Run main.py with command in below pattern:
 | --plain_text_content_file_path | No | Path to a plain text file containing the podcast content, the file will be uploaded by Text property with plain text. If this argument is provided, the content will be read from the specified file instead of using a URL. |
 | --base64_content_file_path | No | Path to a file containing the base64-encoded content for the podcast, the file will be uploaded by Base64Text property with base64-encoded content. If this argument is provided, the content will be read from the specified file instead of using a URL. |
 | --target_locale | No | The locale of the podcast. Locale code follows BCP-47. You can find the text to speech locale list [here](https://learn.microsoft.com/azure/ai-services/speech-service/language-support?tabs=tts). |
-| --voice_name | No | The voice name to be used for TTS synthesis. You can find the voice name list [here](https://learn.microsoft.com/azure/ai-services/speech-service/voice-list?tabs=tts). |
+| --voice_name | No | The voice name to be used for TTS synthesis. You can find the voice name list [here](https://learn.microsoft.com/azure/ai-services/speech-service/language-support?tabs=tts). |
 | --multi_talker_voice_speaker_names | No | The multi-talker voice speaker names, separated by comma, to be used for TTS synthesis. |
 | --gender_preference | No | Gender preference of the podcast voice. Possible values are Female/Male. |
 | --length | No | The length of the podcast. Possible values are VeryShort/Short/Medium/Long/VeryLong. |

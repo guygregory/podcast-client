@@ -1,0 +1,323 @@
+Champion session on Responsys API, the next gen interface to OpenAI models. A little bit of housekeeping before we get started. This session will be recorded today by my wonderful colleague, Gonzalo. The recording and the slides will be available on the Cloud Champion site a few days later. Just use the the same URL that you're using to access this live session. You are very welcome to add questions via the q and a throughout the presentation, and I'll address them at the end of the session. The q and a won't be included in the recording.
+
+So, really, there's there's there's three kind of fundamental areas that I wanted to kinda cover off today as part of this session.
+
+Firstly, I want to explain why Responsys API is a great place to start if you're completely new to building apps and agents that use OpenAI's models for inference.
+
+Second, I want you to sort of strongly consider migrating to response API if your existing solution uses the legacy assistance API or chat completions.
+
+And I want to help you understand how frameworks like Foundry agent service, Microsoft agent framework, semantic kernel, and lang chain leverage these underlying, API primitives. Before we get started, a quick intro for, for those who don't know me. My name is Guy Gregory. I am a partner solution architect, and I work in our UK and Ireland partner team. I've been at Microsoft for eight years now in the partner team throughout and in my current role for about a year and a half.
+
+Before I joined Microsoft eight years ago, I was working with Microsoft Partners for fifteen years. And you're very welcome to connect with me on LinkedIn, Kai Gregory.
+
+I don't actually see the names in this chat, so if you did want to, you know, make yourself known, connecting with me on LinkedIn is probably the best way to do it.
+
+And we have a lot to get into today, but before we delve into any demos and code, let's just take a step back and see how we got to where we are today with the responses API.
+
+So Azure OpenAI is celebrating its fifth year. And as you can see from this timeline, Responsys API is actually a a relative newcomer. The story starts actually a year before this in twenty twenty with the initial release of the completions API by OpenAI followed in November of twenty twenty one by GA and Azure over availability.
+
+The completions API was a very simple text in and text out API that essentially lets you complete sentences like, it's a lovely day. Let's go to the and then it would send back the beach. Now in March twenty twenty three, the chat completions API came along, giving API access to models like GPT three point five turbo. Now the innovation here was that the prompt became an ordered array of of messages where each item had a specific role. So, you know, you had the system role for instructions, the user role for human input, and the assistant role for the model response, which made creating, you know, chatbots much simpler and easier. And it launched as a text only API. And while it does now support images, this wasn't really done in the initial design, so it was kinda crowbarred in.
+
+The chat completions API was famously designed by OpenAI over a weekend. And as models became more advanced, the initial design limitations really started to show.
+
+So that's why we've now got some more modern APIs available to us. The next iteration really was the assistance API, and the v two of the assistance API launched in November twenty twenty three as OpenAI's first real attempt at agents with an API which could manage the conversation state and also had access to built in tools like web search, file search, and code interpreter.
+
+This is the API which powers the original version of our agent service.
+
+And then this last year, in March twenty twenty five, we have the introduction of this response API, which is OpenAI's latest interface designed with all of the modern features of agents. So it supports multiple modalities by default. It's not just designed for text based images. It supports reasoning models natively and is able to preserve the reasoning state between turns.
+
+It also has a range of built in tool tools like assistance API and plenty of options to extend those tool capabilities through API calls and model context protocol.
+
+It can also call multiple tools per call, per per API call, and it can even do it in parallel as well.
+
+Finally, the responses API works in an agentic loop, which allows the model to kinda repeatedly reason to then call tools, observe the results, update its context, and then decide on the next course of action in a loop rather than just producing a simple single one off response.
+
+Now next on this timeline here, I've included this, which is in, you know, in twenty twenty six.
+
+One thing that we are expecting is actually the retirement of this v two assistance API. Now OpenAI announced back in August that they are going to retire the assistance API on their API platform in August twenty twenty six. I can confirm that, actually, the assistance API will also be retired from Microsoft Foundry this year as well in twenty twenty six. We haven't given a a firm date yet, but just bear in mind that that is coming. So if you are if you have any dependency on the assistance API, then please bear that in mind.
+
+The responses API in Microsoft Foundry reached GA last year. It's it's now available to all Microsoft Foundry developers with absolutely no gating at all.
+
+OpenAI have described it as combining the simplicity of the chat completions API with the tool used capabilities of the assistance API for building agents. And I would say it's even gone beyond that now. It's it's much more than just a simple, you know, combination of of both of those. I think it's exceeded that now, and, you know, the the new developments and investments that are going into the API are are going into Responsys API.
+
+OpenAI also said that this is the API that they'll be using, they'll be building on for the years ahead.
+
+So you can kind of rely on it being here for for a while.
+
+I personally really like it for its simplicity, its features, and its very kind of concise and and quite elegant nature, and I'll get into that in a second.
+
+So let's compare a typical request between, say, chat completions and responses just to give you a comparison.
+
+So here is an example chat completions request, you know, just to simply tell me a joke.
+
+Chat completions was great for its time, but there were definitely a few frustrations. First, we'll start at the bottom here. You know, when you got the response, you always had to parse out the message, text, which, you know, it wasn't very pretty, and it always took me longer than it needed to. So that was that was a bit of a pain.
+
+Next, if you're using chat completions in, like, a multi term conversation, you had to manage this kind of conversation state yourself. You'd either have to implement your own chat history within your application, or you'd have to rely on on another library like something like LangChain to to kinda do that for you.
+
+And finally, when we we originally launched chat completions on Azure OpenAI, we actually had a separate Azure OpenAI library which required you to specify and update the API version.
+
+That, again, was also quite tedious to manage. So it often lagged behind the the kind of standard OpenAI library as well.
+
+The good news is that the new responses API has done away with that. We've actually unified the Python library now under the open a OpenAI library. So this is using the standard OpenAI v one endpoint.
+
+And you can see it already actually here if you compare these code samples that the responses API example is just so much more cleaner, simpler, and more readable as well.
+
+Responses API supports multi modal inputs and outputs out of the gates. And you can see even in the choice of language here, switching from the word messages to the more generic input, you know, this, this API is actually geared up to support, things like images, voice, speech, video from the get go.
+
+And my favorite, no more no more ugly parsing of of JSON to get the access to the the output text. You can simply use this, convenience method to to access that text really easily.
+
+And I've got a demo of this later, but I think this is another killer feature of responses API, which is, you know, if you're starting from scratch or if or if you're moving over from chat completions, I think this is a really great advantage.
+
+If you provide the previous response ID in your request, then the model will be able to see the full context of the previous conversation without you having to implement your own chat history. And so you can do this, you know, iteratively, always pointing to the most recent response, and that makes it so simple to to have a multi turn conversation without having to to implement any of that kind of conversational logic.
+
+I think this table sums it up quite well in terms of of the advantages of of responses API. You know, check completions API, it can do the basics, especially if all you need to do is simple text based inference. If chat completions works for you, then that's great. Keep keep using it. I mean, chat completions isn't isn't really gonna go anywhere. So, you know, if that's all you need to do, then you just carry on.
+
+Assistance API was kinda like the next next level where it added the, you know, this conversation state and these tools like file search and code interpreter.
+
+But, obviously, as I mentioned earlier, assistance API, it only has, you know, a few months to run before it's gonna be retired by by both OpenAI and Microsoft. So if you're gonna start from scratch today, it's pretty clear from this that you'd want to use the responses API.
+
+If you have existing solutions that that use chat completions, you know, you can see here all the different capabilities that you would gain by switching over to responses.
+
+And if you want to fully understand and appreciate the responses API, I would highly recommend reading this article here, why we built the responses API.
+
+It's by the designers of the API at OpenAI because it gives really great context around some of the design decisions and reinforces that, you know, this is the API that's gonna be around for years to come if you are using OpenAI models, whether that's on OpenAI's platform or on Microsoft Foundry.
+
+I also recommend reviewing the API reference on on both OpenAI's site, but also on the Microsoft Learn site where, you know, we provide sample code in Python and also REST API samples to get you up and running and and to show how the features work.
+
+I am going to get into a quick demo. I'm gonna start with the REST API because, you know, this is fundamentally how every response's API request gets sent, whether, you know, directly, via a a REST API call or, you know, ultimately, all of our SDKs that are using responses are simply a wrapper to to send these REST API calls. And, of course, the beauty of this is if if you can make a REST API call get this functionality, then even if your application or your your solution doesn't natively support calling these models, then, know, if you are able to send a REST request, and that could be, you know, in your, say, in your automation tool or in a third party tool, as long as you can send a a REST request, then you should be able to use these features.
+
+And that extends to things like, you know, anything that could could use PowerShell or Curl, for example, or any automation tool that that could do that. So, essentially, when we're sending a REST request, we we have the same information. It's it's the endpoint URL for the API.
+
+In in our case, we're gonna be using the the v one endpoints.
+
+We're gonna send the API key, or if you're using enter ID, you can use enter for authentication with Microsoft Foundry.
+
+So you would essentially send the bearer token that's been generated once your Entra has been authenticated.
+
+On our platform, what you're sending is the deployment name for your model. The deployment name can be different from model name in in Foundry because you get to choose what the the name is for your deployment.
+
+And then finally, obviously, you're sending over the input, the the prompt in the body of the REST request. And so that's being sent over to the the URL, and in response, you are getting back some JSON, which includes the output text as well as some of the useful information. So I'm gonna switch over to my API testing tool here. So I'm using a tool called Bruno. Bruno is an open source API testing tool which is freely available, and it's very similar to Postman.
+
+And we are gonna just go through a quick demo of this here. And as you can see, I'm gonna send a a post request to this API endpoint, which is a Foundry project and this a Foundry project resource, and this is the the a v one API endpoint that we're going to send all of our requests to.
+
+We're also gonna specify in here the the deployment name. So in this case, we're gonna be using GPT five point two chat. And in the message headers, we're going to be including the API key, which I've actually hidden as a secret in this example. So we're gonna send that request over to the endpoint, and it's gonna come back rather quickly with a response. So in two seconds, came back with the response. And if we have a look down here, you can see, you know, message completed, output text, and it's giving me this joke.
+
+Why don't programmers like nature?
+
+Too many bugs.
+
+So if we scroll a little bit further down, we can actually see some other information here, like, for example, how much how many input tokens the the request used and how many output tokens. And obviously, this is useful if you're wanting to track the the usage of your models and also the the cost that you're incurring as well.
+
+Next, I'm gonna show you a slightly different example here, which is going to be a reasoning example. As I mentioned earlier, responses API natively supports reasoning, and it does that in a couple of ways. Firstly, you can ask for reasoning summaries With with OpenAI models, they don't actually include the full chain of thought reasoning, but you can ask for a reasoning summary.
+
+And if we have a look in the message output in this API call, you can see here outputs type reasoning type summary text, and you can see here this is the reasoning summary that kinda shows the model's thinking before it provides the output text.
+
+In in here, we're able to specify the the reasoning effort, and we're also able to you know, if we're if we're having a multi turn conversation, then the beauty of of responses API is it essentially passes the it preserves the the reasoning state between turns, which is something that that check completions doesn't do.
+
+And there we go. You can see here, this is the response that's come back as the output text.
+
+Okay. So moving on now, I'm gonna show you an example of a a newer tool, which is the web search preview tool. This launched at Microsoft Ignite. It's still in preview at the moment.
+
+Hopefully, we'll be at a preview soon, but this web search tool essentially grounds the agent in a web search using Microsoft Bing. And by grounding the agent in a live web search, you can provide back, you know, up to date information with references to the source URLs as well. So if we look at the output JSON here, we can see, for example, that it's performed a web search using this search term, and it's returning back a number of, web URLs, which include articles.
+
+So that's the the information that the model is using for grounding.
+
+And then you can see here the output text, which, you know, is the the summary of the trends in renewable energy. And at the bottom of this, usually, it'll also include those citations so you can actually click on the the link and see where this information has been gathered from.
+
+So really valuable, really useful, and, you know, really helpful to to be able to to check that. And all of these samples I've actually made available in this GitHub repo. So there's a repo that you can access, which is this a k a dot m s forward slash responses API.
+
+And then if you go into this REST folder here, then I've essentially made the API collections available as two different formats. So if you're using Bruno, you can download this one. If you're using the API tool Postman, then you can download and import this one, and that will give you all of these different samples straight away. You'll have to include your you have to update your variables to to include your endpoints and API keys, but that's that's a relatively simple task to do.
+
+Okay. So as well as having these REST API request samples, There's also in this repo a whole host of Python examples as well covering pretty much every scenario that you can imagine. This has been broken down into these are the kind of the older legacy last gen API options that use the primarily the the Azure OpenAI library. This is what I would recommend if you're if you're starting now from from scratch to use the the sort of unified OpenAI library using the the v one API endpoints.
+
+And so I'll show you just a few few demos of the Python SDK as well, starting with, again, this sort of basic response, which is we're gonna use the same kind of example here as we did before. You know, tell me a joke.
+
+What I'm doing here is importing my my OpenAI SDK, my OpenAI library.
+
+Then I'm loading my environment variables from the dot EMV file. And there's actually a there's a dot EMV dot sample file if you want to just simply, you know, go in here and fill in your your details.
+
+Then we are essentially defining the client that we're using. In this case, we're going to pass the API key and the base URL, the API v one URL for our for our project, then we are going to create a response here. Again, we're gonna pass the model. In this case, again, we're gonna use the GPT five point two chat model.
+
+And then the input is just simply tell me a joke.
+
+And as I mentioned earlier, we've now got this really handy, like, convenience feature, this, like, output text method where essentially it will extract the output text without us having to to kinda parse out that JSON. So highly recommend using this feature.
+
+Okay. So why did the scarecrow win an award? Because he was outstanding in his field.
+
+Fantastic. Okay. And kinda to to kinda take extend this demo to to another level, we're gonna do something similar here. But every, every time we send a request, we're gonna actually gonna loop around and chain these messages together in using this message chaining feature that I mentioned earlier.
+
+Essentially, we're gonna feed in the response ID from the previous response into the response of the, the new one. So let's give this an example. Enter your message. Hi.
+
+My name is Guy, and I like black coffee.
+
+It's probably gonna give me some, observation about black coffee here, and, there we go. Okay. Now the beauty here now is if I say, something like, tell me my name and what I like to drink.
+
+Now normally, if you did this, it wouldn't know anything because because it wouldn't have a context. But because this is referring to the previous response ID, it's now able to provide me back the information that we've already discussed without me having to implement a very, you know, long winded and complicated, chat history database. So again, in just in thirty lines of Python, this is is already starting to become a useful chatbot.
+
+And and by default, responses API is stateful when you send a message over to it, unless you specify otherwise.
+
+It will actually store that message so that you can then refer to the message on subsequent turns. But if you don't want to do that, if you don't want your message to be stored, you can actually tell it that as well. So if I go into this example here, which is the stateless example, Squid out of here.
+
+Now if I send this over, and I'm gonna specify store equals false to avoid storing this data, and I'm also going to ask it to encrypt the reasoning content as well.
+
+And it's gonna give me back pretty much the same kind of answer. The only difference here is if I then tried to feed this response ID back into the new response, it wouldn't have any memory of it because this response hasn't been this request, this response hasn't been stored on the back end.
+
+So this could be really useful if you've got maybe a customer that has really demanding data sovereignty needs or simply wants to reduce their kind of footprint of of data that's stored in this service.
+
+Moving on. Another really great feature that's included in responses API is structured outputs. Structured outputs isn't a particularly new feature, but I think it's quite an underutilized feature, and and so I wanted to include it here as a as a kind of bonus. Structured outputs. So, essentially, when you use structured outputs, you are asking the model to respond not using just a a free text response, but by using a strict JSON object, which complies a hundred percent to a JSON schema that you give it so that you can really tightly control what's coming back. And this is super useful for, like, automation or if you're feeding this into another step.
+
+Now the example I'm using here is this sentence here. Alice and Bob are going to science fair on Friday. I wanted to extract the event information and utilize this JSON schema to provide that response. And in this JSON schema, we're asking for the name of the event, the date of the event, and the participants, but the participants is gonna be returned in an array of type string.
+
+So let's see how it did.
+
+Okay. The event name is science fair. Yep. That's right. The date it's provided back is the sixteenth of January twenty twenty six, which is indeed on Friday.
+
+And the participants or Alice and Bobanis returned that as an array of strings. So exactly how we expected. And the beauty of this is is if you do specify this JSON schema, it'll a hundred percent respond back in this strict JSON format. You can always guarantee that that response back.
+
+And then one final Python example I'm gonna show here, one which is becoming much more popular over the last few months with with our partners, is utilizing the responses API built in remote MCP client. So MCP model context protocol is this new protocol which enables models to be able to interface with tools in a standardized and open fashion. So Anthropic were the ones who originally came up with this, and they've recently donated the specification and the the idea to the the Linux Foundation.
+
+So and it's been widely adopted by pretty much all of the the major players within within AI.
+
+And when we when we want to use the responses MCP client, all we really need to do is define the the MCP server as a tool, and then you do that by providing the MCP server URL.
+
+You tell it which tools it's allowed to use, and you can do also do things like tell it whether you require approval or not. In this case, it's just gonna be accessing our Microsoft Learn docs, which, you know, it's only gonna be accessing it in read only mode, so I don't need need it to get approval for that. I'm gonna give you this example, provide a one sentence summary of the Microsoft agent framework and provide a link to a quick start guide. Let's see how it did.
+
+Microsoft Agent Framework is a Microsoft SDK and set of tools for building, running, and managing AI agents.
+
+Fantastic. Ten out of ten. And provide a link to the quick start guide. The quick start guide it's giving me is this one, which looks exactly what I need. Perfect. And so, you know, by using tools like the the MCP tool, you can really extend the the capability of of the agents you're building by utilizing these third party MCP servers in a really kind of extensible but simple way.
+
+And if I'm, you know, on the subject of building agents that that can use tools, Foundry agent service is has recently been updated. So Microsoft Ignite in November, we it underwent a completely new rebrand as part of the update.
+
+We have also completely rearchitected the underlying API. So this is now using the responses API as its core engine under the HUD.
+
+The previous version of agent service was using the assistance API.
+
+So there are loads of great benefits that we are getting as part of that that migration over to Responses API.
+
+And, obviously, as assistance API is being phased out this year, that provides us with a a kind of a clearer future path for for this service.
+
+And, you know, if you don't believe me, you can simply look in the, the the code, the quick start guide to see that in Foundry agent service, it is using the Foundry SDK. It's using the AI project client. This is a new library within the within the Foundry SDK.
+
+And within that, it's using it actually has a dependency on the OpenAI client, and then it bring in the responses client. The nice thing about it is actually I'll show as I'll show you in a minute, we're actually bringing in the the OpenAI client as a as a dependency rather than essentially reimplementing the the code in OpenAI's client. So that means that it's gonna be far more consistent, and we'll we'll get updates far more quickly.
+
+And it will support newer models almost immediately because, essentially, we are we are inheriting the OpenAI client as part of this AI project client. And I've got a little diagram that will hopefully sort of clarify that that visually.
+
+Similar situation as well with with Microsoft Agent Framework. Last year, Microsoft Agent Framework was announced, which was the kind of the natural successor to, Symantec Kernel. It's built by the same team.
+
+And, you know, Microsoft Agent Framework natively is built to use responses API, and, you know, it is designed from the ground up for for a gen workflows.
+
+And, you know, the with agent framework, you actually have two different options here if you want to leverage responses API based orchestration.
+
+Looking in the sample code for agent framework, there's these two options here. So you can either talk to the OpenAI responses client directly, which is leveraging the OpenAI SDK as a as a dependency here.
+
+This obviously works across both the OpenAI API and Microsoft Foundry.
+
+Or alternatively, again, you can use this new AI project client, which is essentially the the approach that you would use if you want to leverage some of the tools and features within a Foundry project.
+
+This is the the approach that you'd use if you want to use things like agent framework, for example.
+
+Sorry, not agent framework, agent service, Foundry agent service.
+
+Hopefully, I'll try and clarify this a little bit further here by just showing you you kind of this table here, which is, you know, the OpenAI SDK. This is this is created and and maintained by OpenAI themselves.
+
+It supports currently all three API service surfaces, so chat completions, assistance, responses. Assistance will disappear later on this year in in August.
+
+And this is actually used by Langchain if you install the the OpenAI module, it's supported by both semantic kernel and agent framework, and it's also used by many, many others, especially tools which were built with OpenAI in mind first, and then they've essentially adapted it for also for use with Foundry as well.
+
+Then the other option here in the Foundry SDK so so these three libraries here, these make up the the Foundry SDK.
+
+And in here, the the one option is using the Azure AI inference library. That is actually powered by chat completions, and and that's what is used at the moment in frameworks like the Langchain Azure AI framework. So that's that's the advantage of this is it's it's it's model flexibility. For example, it's it's able to use OpenAI models, but but also other OpenAI other other model providers as well.
+
+Then moving on, we also have this this is now considered, I would say, legacy, this Azure AI agents library. This is one that's gonna get retired this year because this is essentially the, assistance API, library. This is what we used in the the original version of the Azure AI agent service. So if you're still using that, I think now is a good time to start thinking about moving off of of the dependency for this library and this service.
+
+You know, semantic kernel agent framework, they they both support this just, I guess, through through the fact that these these tend to support so many different libraries anyway.
+
+And then this is the new boy. This is the new kid on the block. The the Azure AI projects library, this is kind of what's powering all of our, you know, new services.
+
+This does have the option to to use a chat completions provider or a responses API provider, it it has a dependency on the OpenAI library. So instead of reimplementing all of the code in here, it's essentially just pointing out to this, bringing in the the the API provider, and then allowing you to use this on top of all of the other benefits that you would get in your Foundry project.
+
+So you can see here Foundry Agent Service v two, Agent Framework. These are all being used by these are these are all using this this new SDK. And I tried to kind of explain this visually as well.
+
+So if you are using the legacy version of Azure AI agent service today, that is using the AI agents library, which is then in turn leveraging the assistance API to access the Foundry model versus the new Foundry agent service. This is the the new version.
+
+It's using the Azure AI project that gives you all of the access to the the features and tools within the Foundry project, but also it's bringing in the the provider. It's bringing in the responses API client from the OpenAI library.
+
+And in the case of Foundry agent service, it's using Responses API to access the model. And then the other one I mentioned here was the LangChain Azure AI framework. That's currently using the Azure AI inference library that leverages the chat completions API to interface with the model.
+
+And the the LangChain does actually have these these kind of two different methods of of using. So the other option here and if you wanted to to use responses API in LangChain, then really you need to be using the OpenAI library at the moment because that is essentially bringing in in a similar way actually to to the way that our projects library does. It brings in the OpenAI library as a as a dependency to allow you then to use the responses API client to interact with the models.
+
+And, yeah, of course, Microsoft Agent Framework also supports either using the OpenAI library directly, or if you are going to leverage some of the features of Microsoft Foundry, then you can also use the the projects library, which then brings in the the responses client from the OpenAI library.
+
+It's a bit complicated, but I'm hoping that that does kind of clarify, you know, some of these SDKs, especially, you know, which SDKs are going to be retired and which ones are gonna continue to be used over the next year or so.
+
+You know, when I think about the the the libraries and the SDKs here, one thing that is worth considering is all the different models that can be used with Responsys API. So, of course, you know, most, if not all, of the the OpenAI models are supported using Responsys API, especially the newer reasoning models. It's, you know, it's really the best API to use if you are using these reasoning models.
+
+One brand new model that landed in the platform literally last night was GPT five point two codecs. So that is brand new.
+
+This is also what's powering, you know, GitHub Copilot as well.
+
+But actually, you can use third party models with Responsys API, especially if you're using the Foundry SDK, which, you know, has model flexibility to its core.
+
+This is ultimately how we are able to offer Foundry agent service with that model flexibility because, obviously, it's leveraging that that Foundry project interface to to be able to utilize these. And and this list here, I've got that, from our documentation. Obviously, it's subject to change. For the OpenAI models, I don't think we list all of these out separately, but, actually, if you go into the Foundry portal, there is a filter in the model catalog that will allow you to filter on responses. So it will then show you the OpenAI models that that are responses compatible.
+
+Okay.
+
+So getting near to the end now. What is coming soon to responses API? Well, there's a couple of really exciting new features that are coming.
+
+One of those is conversations API. This feature is already available in the Foundry agent service.
+
+If you ever use the conversation or actually threads feature in assistance API, then you will have a a kinda good understanding of what the conversations API can do.
+
+It's a way to let the responses API maintain and reference these kind of structured conversations across multiple turns, and it's it's kinda managed in the same way that you you did with with the assistance API.
+
+That's the the actual underlying API that we're using for for Foundry agent service today, but it's coming soon to responses API as well if you just want to use responses API in Foundry.
+
+You can still continue to use the, you know, the message chaining feature using the previous response ID. And I think for most applications, this is probably gonna be the the simplest way forward is just to use this message chain. I find it super convenient and super easy to use. So I think if you are using that, there's nothing stopping you from from keep doing that.
+
+And the other really nice feature, which is coming soon to Foundry, is this feature called compaction. So when you're using, when you're having a really long running conversation, this could be, you know, a chat. It could be a a coding session. It could be, you know, any kind of thing which continues on over loads and loads of different turns. There is going to be a a feature which allows you to essentially compress the the messages down into a a smaller amount to allow you then to continue that conversation without running out of the context window that all of these models do have.
+
+The the essentially, the the compaction is done as an API call, and it returns back the kind of compressed object that you can then include in your your next response's request to then give you a little bit more headroom.
+
+The way it works is that all of the previous user messages, they're kept as exactly as they are, whereas the the actual assistant responses, the tool calls, the outputs, all the reasoning state, all of that is gonna compress down into a smaller, you know, blob that then can maintain the actual understanding of the conversation, but without having to take up all of the the context. It's probably gonna hope hopefully, should reduce the the cost as well because if you're compressing down the the number of tokens that you're using, that should also reduce the the cost too.
+
+I'm gonna leave you with some useful links. Now I appreciate the way that I'm presenting this today. You won't be able to click on these links directly, but rest assured, the PDF version of this presentation will be available very shortly after. So you'll be able to click on all these links and get access to them here.
+
+You we've got the Microsoft Learn documentation, which is, you know, highly recommended, worth a read. Then we've got the responses API GitHub samples that I've shared in my repository.
+
+Foundry SDK samples. This is the the essentially the underpinning of Foundry agent service.
+
+And we've also got semantic kernel and and agent framework samples as well here. And I've also included, just simply because responses API is, ultimately, OpenAI's standard, there are some useful resources to to read through here, like that document about why they built the the Response API, and a really nice YouTube video of them going over some of the features of Response API last year.
+
+I am delighted that we actually have this brand new series session of twelve that we, as as the UK and Ireland PSA team, are running. I have these fantastic colleagues in the UK and Ireland team, which are presenting on a whole range of different solution areas across AI business solutions, cloud and AI platforms, and security.
+
+And, you know, I would say, do register for these sessions if you can in advance, and we will continue to update this this schedule over time.
+
+Yeah. So please do have a look on the the Cloud Champion site for for all of these upcoming sessions. Next session we have is by my fantastic colleague, Vas. He's gonna be doing a session on demystifying Copilot Studio licensing, which I know is gonna be a popular topic for our partners.
+
+If you have, liked what you saw today and you really wanna get into, using Microsoft Foundry, models, then you can leverage your Microsoft AI cloud partner program benefits in order to access Microsoft Foundry and Foundry models. I've put this one pager together for our partners. So regardless of what stage you are in your membership, you can access, you know, AI models really easily and making full use of your benefits. The only thing I would mention here is actually GitHub models.
+
+If you are wanting specifically to use responses API, you might be out of luck with GitHub models. At the moment, the way that GitHub models works is it uses the Azure inference library, which is using chat completions only.
+
+So as far as I'm aware, there's still really no way to use the GitHub model's free tier to access responses API. But you could always set up an Azure free account or use your Azure book credit or your Visual Studio license subscriptions to access these models.
+
+I would also highly recommend if you are a developer building on Microsoft Foundry, join our Discord community. We've got now over forty five thousand members of this fantastic community. It's for everybody. It's for partners, for developers, for customers, for people who are just interested in, you know, building AI agents.
+
+We have fantastic discussions in there. There are Microsoft employees. There are Microsoft MVPs.
+
+There are Microsoft partners that hang out here. We share code samples. We share sessions. There are regular model Monday sessions that we do. So I'm actually presenting a a version of this on the twenty sixth in the the developer community as well. So if you did want to send any of your your colleagues or fellow developers over to join that, then this will be available to everybody, not just the Microsoft partners like this session is today.
+
+Finally, before we wrap up, just a few next steps.
+
+I think if you're interested in in exploring Responsys API a bit more, have a look through the documentation, have a look through the API guide, and just try it out yourself. Some of these demos that I've I've shared with the the GitHub repo, you know, they're really easy to get to get started. And I'll also, if you look in this, repo, there's also the option to, just simply spin this up as a GitHub code space for free. So you can actually go in here.
+
+This is running in a containerized GitHub environment, completely free of charge. All you need to do is just simply provide your API details. In fact, these details aren't even required anymore. You just need to provide the v one endpoint URL, the API key, and the model.
+
+And you don't even need to provide the OpenAI key if you want to use enter authentication as well, really. So it's really just, you know, these bits of information that you need to to provide in order to use these samples.
+
+And like I say, you know, you can go in here. You can open up this code space, and you can run these samples. You can customize the samples. You can experiment in here without incurring really any costs other than the costs of the inference of the the model.
+
+So with that, I am going to oh, yeah. The the GitHub repo that I've mentioned there, you can access that through this URL.
+
+Please do drop a star on GitHub if you find it useful. This QR code here will take you directly to the the repo in question.
+
+And with that, I am going to say thank you very much to everyone for watching.

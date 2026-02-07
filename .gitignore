@@ -343,3 +343,5 @@ node_modules/
 .conda/
 
 launch.json
+
+.env

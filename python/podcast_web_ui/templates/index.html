@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Podcast Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="container">
+    <h1>&#127897; Podcast Generator</h1>
+    <p class="subtitle">Azure Speech Service &mdash; Podcast Creation API</p>
+
+    <!-- ===== Toast for errors ===== -->
+    <div id="toast"></div>
+
+    <!-- ===== Configuration ===== -->
+    <form id="gen-form" enctype="multipart/form-data">
+        <div class="card">
+            <h2>Configuration</h2>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="region">Azure Region</label>
+                    <input type="text" id="region" name="region"
+                           value="{{ env.REGION }}" placeholder="eastus" required>
+                </div>
+                <div class="form-group">
+                    <label for="api_version">API Version</label>
+                    <input type="text" id="api_version" name="api_version"
+                           value="{{ env.API_VERSION }}" placeholder="2026-01-01-preview" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="sub_key">API Key (Speech Service)
+                    <a href="https://ms.portal.azure.com/#create/Microsoft.CognitiveServicesSpeechServices"
+                       target="_blank" rel="noopener noreferrer"
+                       style="margin-left:.5em; font-weight:normal; font-size:.9em;">Create new Azure Speech instance</a>
+                </label>
+                <div class="secret-wrapper">
+                    <input type="password" id="sub_key" name="sub_key"
+                           value="{{ env.SUB_KEY }}" placeholder="Enter your subscription key" required
+                           autocomplete="off">
+                    <button type="button" class="secret-toggle" id="toggle-key"
+                            title="Show / hide key" aria-label="Toggle key visibility">&#128065;</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="target_locale">Target Locale</label>
+                <select id="target_locale" name="target_locale" required>
+                    {% for locale in locales %}
+                    <option value="{{ locale }}"{% if locale == 'en-US' %} selected{% endif %}>{{ locale }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- ===== File Selection ===== -->
+        <div class="card">
+            <h2>Content Source</h2>
+
+            <div class="radio-tabs">
+                <label>
+                    <input type="radio" name="file_source" value="upload" checked
+                           onchange="toggleFileSource()">
+                    Upload from PC
+                </label>
+                <label>
+                    <input type="radio" name="file_source" value="server"
+                           onchange="toggleFileSource()">
+                    Select from input_files folder
+                </label>
+            </div>
+
+            <!-- Upload file picker -->
+            <div id="upload-file-group" class="form-group">
+                <label for="file">Choose a .txt or .pdf file</label>
+                <input type="file" id="file" name="file" accept=".txt,.pdf">
+            </div>
+
+            <!-- Server file picker -->
+            <div id="server-file-group" class="form-group" style="display:none">
+                <label for="server_file">Available files (input_files/)</label>
+                <select id="server_file" name="server_file">
+                    <option value="">Loading&hellip;</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- ===== Additional Settings (Optional, collapsible) ===== -->
+        <div class="card">
+            <button type="button" class="collapse-toggle" id="toggle-options"
+                    onclick="toggleOptions()">
+                <h2 style="display:inline;margin:0">Additional Settings (Optional)</h2>
+                <span class="collapse-icon" id="collapse-icon">&#9664;</span>
+            </button>
+
+            <div id="options-panel" class="options-panel" style="display:none">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="voice_name">Voice Name</label>
+                        <input type="text" id="voice_name" name="voice_name"
+                               placeholder="e.g. en-US-AvaMultilingualNeural">
+                    </div>
+                    <div class="form-group">
+                        <label for="multi_talker_voice_speaker_names">Multi-Talker Speakers</label>
+                        <input type="text" id="multi_talker_voice_speaker_names"
+                               name="multi_talker_voice_speaker_names"
+                               placeholder="e.g. ava,steffan">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="gender_preference">Gender Preference</label>
+                        <select id="gender_preference" name="gender_preference">
+                            <option value="Female" selected>Female</option>
+                            <option value="Male">Male</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="length">Length</label>
+                        <select id="length" name="length">
+                            <option value="VeryShort">Very Short</option>
+                            <option value="Short">Short</option>
+                            <option value="Medium" selected>Medium</option>
+                            <option value="Long">Long</option>
+                            <option value="VeryLong">Very Long</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="host">Host Configuration</label>
+                        <select id="host" name="host">
+                            <option value="OneHost">One Host</option>
+                            <option value="TwoHosts" selected>Two Hosts</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="style">Style</label>
+                        <select id="style" name="style">
+                            <option value="Default" selected>Default</option>
+                            <option value="Professional">Professional</option>
+                            <option value="Casual">Casual</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="additional_instructions">Additional Instructions</label>
+                    <textarea id="additional_instructions" name="additional_instructions"
+                              rows="3" placeholder="e.g. Focus on technology trends"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="btn-generate">
+            Generate Podcast
+        </button>
+    </form>
+
+    <!-- ===== Status ===== -->
+    <div id="status-area" class="card">
+        <h2>Generation Status</h2>
+        <div id="status-content">
+            <span class="spinner"></span>
+            <span class="status-badge starting" id="status-badge">Starting</span>
+            <div class="poll-dots" id="poll-dots"></div>
+        </div>
+    </div>
+
+    <!-- ===== Result ===== -->
+    <div id="result-area" class="card">
+        <h2>Result</h2>
+        <div id="result-content"></div>
+    </div>
+</div>
+
+<script>
+    // ---- Options panel toggle -----------------------------------------------
+    function toggleOptions() {
+        const panel = document.getElementById('options-panel');
+        const icon = document.getElementById('collapse-icon');
+        const visible = panel.style.display !== 'none';
+        panel.style.display = visible ? 'none' : '';
+        icon.textContent = visible ? '\u25B6' : '\u25BC';
+    }
+
+    // ---- File source toggle ------------------------------------------------
+    function toggleFileSource() {
+        const source = document.querySelector('input[name="file_source"]:checked').value;
+        document.getElementById('upload-file-group').style.display = source === 'upload' ? '' : 'none';
+        document.getElementById('server-file-group').style.display = source === 'server' ? '' : 'none';
+    }
+
+    // ---- Show / hide API key -----------------------------------------------
+    document.getElementById('toggle-key').addEventListener('click', () => {
+        const inp = document.getElementById('sub_key');
+        const isPassword = inp.type === 'password';
+        inp.type = isPassword ? 'text' : 'password';
+        document.getElementById('toggle-key').textContent = isPassword ? '\u{1F648}' : '\u{1F441}';
+    });
+
+    // ---- Load server files -------------------------------------------------
+    async function loadServerFiles() {
+        try {
+            const resp = await fetch('/api/input-files');
+            const data = await resp.json();
+            const sel = document.getElementById('server_file');
+            sel.innerHTML = '';
+            if (data.files.length === 0) {
+                sel.innerHTML = '<option value="">No files found</option>';
+                return;
+            }
+            data.files.forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f;
+                opt.textContent = f;
+                if (f === data.preselected) opt.selected = true;
+                sel.appendChild(opt);
+            });
+        } catch (e) {
+            console.error('Failed to load server files', e);
+        }
+    }
+    loadServerFiles();
+
+    // ---- Toast helper ------------------------------------------------------
+    function showToast(msg, duration = 5000) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.style.display = 'block';
+        setTimeout(() => { t.style.display = 'none'; }, duration);
+    }
+
+    // ---- Form submission ---------------------------------------------------
+    document.getElementById('gen-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btn-generate');
+        btn.disabled = true;
+
+        // Reset UI
+        document.getElementById('status-area').style.display = 'none';
+        document.getElementById('result-area').style.display = 'none';
+        document.getElementById('poll-dots').textContent = '';
+
+        const formData = new FormData(document.getElementById('gen-form'));
+
+        try {
+            const resp = await fetch('/api/generate', { method: 'POST', body: formData });
+            const data = await resp.json();
+            if (!resp.ok) {
+                showToast(data.error || 'Request failed');
+                btn.disabled = false;
+                return;
+            }
+
+            // Show status area and begin polling
+            document.getElementById('status-area').style.display = '';
+            pollStatus(data.job_id);
+        } catch (err) {
+            showToast('Network error: ' + err.message);
+            btn.disabled = false;
+        }
+    });
+
+    // ---- Polling -----------------------------------------------------------
+    function pollStatus(jobId) {
+        const badge = document.getElementById('status-badge');
+        const dots = document.getElementById('poll-dots');
+        let dotCount = 0;
+
+        const interval = setInterval(async () => {
+            try {
+                const resp = await fetch(`/api/status/${jobId}`);
+                const data = await resp.json();
+
+                // Update badge
+                badge.textContent = data.status;
+                badge.className = 'status-badge ' + data.status.toLowerCase();
+
+                // Animate dots
+                dotCount++;
+                dots.textContent = '.'.repeat(dotCount % 30 + 1);
+
+                // Terminal states
+                if (['Succeeded', 'Failed'].includes(data.status)) {
+                    clearInterval(interval);
+                    dots.textContent = '';
+                    document.getElementById('btn-generate').disabled = false;
+                    showResult(jobId, data);
+                }
+            } catch (err) {
+                console.error('Poll error', err);
+            }
+        }, 5000);
+    }
+
+    // ---- Show result -------------------------------------------------------
+    function showResult(jobId, data) {
+        const area = document.getElementById('result-area');
+        const content = document.getElementById('result-content');
+        area.style.display = '';
+
+        if (data.status === 'Succeeded' && data.has_audio) {
+            content.innerHTML = `
+                <p style="color:var(--success);font-weight:600;">&#9989; Podcast generated successfully!</p>
+                <audio controls src="/api/download/${jobId}"></audio>
+                <br>
+                <a class="download-link" href="/api/download/${jobId}" download>&#11015; Download MP3</a>
+            `;
+        } else if (data.status === 'Succeeded') {
+            content.innerHTML = `
+                <p style="color:var(--success);font-weight:600;">&#9989; Generation succeeded but no audio URL was returned.</p>
+            `;
+        } else {
+            content.innerHTML = `
+                <div class="error-message">
+                    <strong>Generation failed</strong><br>
+                    ${data.error || 'Unknown error'}
+                </div>
+            `;
+        }
+    }
+</script>
+
+</body>
+</html>

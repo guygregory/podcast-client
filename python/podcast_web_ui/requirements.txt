@@ -1,0 +1,6 @@
+flask>=3.0
+python-dotenv>=1.0
+termcolor
+orjson
+urllib3
+requests
