@@ -96,6 +96,11 @@ def handle_create_generation_and_wait_until_terminated(args):
             return False, error, None
         content_file_temp_file_id = temp_file.id
 
+    # If base64_content_file_path is provided, use it as content_file_path for base64 upload
+    content_file_path = args.content_file_path
+    if args.base64_content_file_path is not None:
+        content_file_path = args.base64_content_file_path
+
     podcast_client = PodcastClient(
         region=args.region,
         sub_key=args.sub_key,
@@ -105,7 +110,7 @@ def handle_create_generation_and_wait_until_terminated(args):
     success, error, generation = podcast_client.create_generation_and_wait_until_terminated(
         target_locale=args.target_locale,
         content_file_azure_blob_url=args.content_file_azure_blob_url,
-        content_file_path=args.content_file_path,
+        content_file_path=content_file_path,
         content_file_temp_file_id=content_file_temp_file_id,
         voice_name=args.voice_name,
         multi_talker_voice_speaker_names=args.multi_talker_voice_speaker_names,
@@ -253,6 +258,7 @@ podcast_parser = sub_parsers.add_parser(
     help='Create podcast generation with pdf/txt file blob url.')
 podcast_parser.add_argument('--content_file_azure_blob_url', required=False, type=str, help=ARGUMENT_HELP_CONTENT_FILE_AZURE_BLOB_URL)
 podcast_parser.add_argument('--content_file_path', required=False, type=str, help=ARGUMENT_HELP_CONTENT_FILE_PATH)
+podcast_parser.add_argument('--base64_content_file_path', required=False, type=str, help=ARGUMENT_HELP_BASE64_CONTENT_FILE_PATH)
 podcast_parser.add_argument('--upload_with_temp_file', required=False, type=bool, help=ARGUMENT_HELP_UPLOAD_TEMP_FILE)
 podcast_parser.add_argument('--content_file_temp_file_id', required=False, type=str, help=ARGUMENT_HELP_CONTENT_FILE_TEMP_FILE_ID)
 podcast_parser.add_argument('--target_locale', required=False, type=str, help=ARGUMENT_HELP_TARGET_LOCALE)

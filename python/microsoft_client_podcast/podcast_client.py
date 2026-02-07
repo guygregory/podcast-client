@@ -204,9 +204,9 @@ class PodcastClient(SpeechLongRunningTaskClientBase):
         elif content_file_temp_file_id is not None:
             create_request_body.content.tempFileId = content_file_temp_file_id
         elif content_file_path is not None:
-            file_extension = os.path.splitext(base64_content_file_path)[1].lower()
+            file_extension = os.path.splitext(content_file_path)[1].lower()
             if file_extension == '.txt':
-                with open(plain_text_content_file_path, 'r', encoding='utf-8') as f:
+                with open(content_file_path, 'r', encoding='utf-8') as f:
                     text_content = f.read()
                     if (len(text_content) <= MAX_PLAIN_TEXT_LENGTH):
                         create_request_body.content.kind=ContentSourceKind.PlainText
@@ -216,7 +216,7 @@ class PodcastClient(SpeechLongRunningTaskClientBase):
                         raise ValueError("Please upload by temp file.")
             elif file_extension == '.pdf':
                 create_request_body.content.fileFormat = ContentFileFormatKind.Pdf
-                with open(base64_content_file_path, 'rb') as f:
+                with open(content_file_path, 'rb') as f:
                     file_binary = f.read()
                     if len(file_binary) <= MAX_BASE64_TEXT_LENGTH:
                         base64_content = base64.b64encode(file_binary).decode('utf-8')
@@ -225,10 +225,6 @@ class PodcastClient(SpeechLongRunningTaskClientBase):
                             create_request_body.content.base64Text = base64_content
                         else:
                             raise ValueError("Input content file too large, should not exceed exceed 50M.")
-                    else:
-                        raise ValueError("Input content file too large, should not exceed exceed 50M.")
-                    if len(base64_content) == 0 and len(file_binary) <= MAX_CONTENT_FILE_SIZE:
-                        raise ValueError("Please upload by temp file.")
                     else:
                         raise ValueError("Input content file too large, should not exceed exceed 50M.")
             else:
