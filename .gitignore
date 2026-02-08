@@ -345,3 +345,7 @@ node_modules/
 launch.json
 
 .env
+
+python/podcast_web_ui/input_files/*
+
+python/podcast_web_ui/podcasts/*
