@@ -162,6 +162,13 @@
                     <textarea id="additional_instructions" name="additional_instructions"
                               rows="3" placeholder="e.g. Focus on technology trends"></textarea>
                 </div>
+
+                <div class="form-group" style="margin-top:.5em">
+                    <label style="display:flex;align-items:center;gap:.5em;cursor:pointer">
+                        <input type="checkbox" id="delete_after_download" name="delete_after_download" checked>
+                        Remove podcast generation from Azure storage after downloaded (recommended)
+                    </label>
+                </div>
             </div>
         </div>
 
@@ -297,6 +304,15 @@
     let _currentPollInterval = null;
     let _savedButtonText = 'Generate podcast';
 
+    function setFormControlsDisabled(disabled) {
+        const form = document.getElementById('gen-form');
+        const controls = form.querySelectorAll('input, select, textarea, button');
+        controls.forEach(el => {
+            if (el.id === 'btn-generate') return; // managed separately
+            el.disabled = disabled;
+        });
+    }
+
     function switchToCancelButton() {
         const btn = document.getElementById('btn-generate');
         _savedButtonText = btn.textContent;
@@ -305,9 +321,11 @@
         btn.classList.add('btn-cancel');
         btn.disabled = false;
         btn.type = 'button';  // prevent form submit
+        setFormControlsDisabled(true);
     }
 
     function restoreGenerateButton() {
+        setFormControlsDisabled(false);
         const btn = document.getElementById('btn-generate');
         btn.textContent = _savedButtonText;
         btn.classList.remove('btn-cancel');
@@ -316,6 +334,8 @@
         btn.type = 'submit';
         document.getElementById('generate-spinner').style.display = 'none';
         _currentJobId = null;
+        // Re-apply bulk mode state (may need server_file re-disabled)
+        toggleBulkMode();
     }
 
     async function cancelCurrentJob() {
@@ -470,6 +490,14 @@
                             restoreGenerateButton();
                             resolve('Cancelled');
                         } else {
+                            // If succeeded and delete-after-download is checked, delete the server generation
+                            if (data.status === 'Succeeded' && document.getElementById('delete_after_download').checked) {
+                                try {
+                                    await fetch(`/api/delete-generation/${jobId}`, { method: 'POST' });
+                                } catch (e) {
+                                    console.warn('Failed to delete generation from server', e);
+                                }
+                            }
                             showResult(jobId, data);
                             restoreGenerateButton();
                             resolve(data.status);

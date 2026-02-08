@@ -236,6 +236,31 @@ def download(job_id: str):
     return send_file(job["audio_path"], as_attachment=True, download_name=f"{job_id}.mp3")
 
 
+@app.route("/api/delete-generation/<job_id>", methods=["POST"])
+def delete_generation(job_id: str):
+    """Delete a podcast generation from the Azure server (best-effort)."""
+    job = jobs.get(job_id)
+    if job is None:
+        return jsonify(error="Job not found"), 404
+
+    info = job.get("client_info", {})
+    if not (info.get("region") and info.get("sub_key") and info.get("api_version")):
+        return jsonify(error="Missing client credentials for deletion"), 400
+
+    try:
+        client = PodcastClient(
+            region=info["region"],
+            sub_key=info["sub_key"],
+            api_version=info["api_version"],
+        )
+        success, error = client.request_delete_generation(job_id)
+        if not success:
+            return jsonify(error=f"Delete failed: {error}"), 500
+        return jsonify(status="Deleted")
+    except Exception as exc:
+        return jsonify(error=str(exc)), 500
+
+
 # ---------------------------------------------------------------------------
 # Background generation logic
 # ---------------------------------------------------------------------------
