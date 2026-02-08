@@ -203,12 +203,10 @@ textarea {
 }
 
 .generate-row audio {
-    width: 100%;
-    max-width: 360px;
+    flex: 1;
     min-width: 0;
     height: 40px;
     margin-top: 0;
-    margin-left: auto;
 }
 
 .generate-spinner {

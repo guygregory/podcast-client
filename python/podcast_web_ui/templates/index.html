@@ -164,6 +164,7 @@
                 Generate Podcast
             </button>
             <span class="generate-spinner" id="generate-spinner" aria-hidden="true"></span>
+            <span id="processing-indicator" style="display:none; flex:1; font-style:italic; color:var(--text-muted, #888);">Processing&hellip;</span>
             <audio controls id="persistent-player" style="display:none"></audio>
         </div>
     </form>
@@ -257,6 +258,24 @@
 
         const formData = new FormData(document.getElementById('gen-form'));
 
+        // Stop audio and show processing indicator
+        const player = document.getElementById('persistent-player');
+        const processingIndicator = document.getElementById('processing-indicator');
+        player.pause();
+        player.style.display = 'none';
+
+        // Determine the filename being processed
+        const fileSource = document.querySelector('input[name="file_source"]:checked').value;
+        let processingName = '';
+        if (fileSource === 'upload') {
+            const fileInput = document.getElementById('file');
+            processingName = fileInput.files.length > 0 ? fileInput.files[0].name : 'file';
+        } else {
+            processingName = document.getElementById('server_file').value || 'file';
+        }
+        processingIndicator.innerHTML = 'Processing "' + processingName + '"';
+        processingIndicator.style.display = 'inline';
+
         try {
             const resp = await fetch('/api/generate', { method: 'POST', body: formData });
             const data = await resp.json();
@@ -264,6 +283,7 @@
                 showToast(data.error || 'Request failed');
                 btn.disabled = false;
                 genSpinner.style.display = 'none';
+                processingIndicator.style.display = 'none';
                 return;
             }
 
@@ -274,6 +294,7 @@
             showToast('Network error: ' + err.message);
             btn.disabled = false;
             genSpinner.style.display = 'none';
+            processingIndicator.style.display = 'none';
         }
     });
 
@@ -317,7 +338,8 @@
         area.style.display = '';
 
         if (data.status === 'Succeeded' && data.has_audio) {
-            // Update the persistent player next to the Generate button
+            // Hide the processing indicator and show the persistent player
+            document.getElementById('processing-indicator').style.display = 'none';
             const player = document.getElementById('persistent-player');
             player.src = `/api/download/${jobId}`;
             player.style.display = '';
@@ -329,10 +351,12 @@
                 <a class="download-link" href="/api/download/${jobId}" download>&#11015; Download MP3</a>
             `;
         } else if (data.status === 'Succeeded') {
+            document.getElementById('processing-indicator').style.display = 'none';
             content.innerHTML = `
                 <p style="color:var(--success);font-weight:600;">&#9989; Generation succeeded but no audio URL was returned.</p>
             `;
         } else {
+            document.getElementById('processing-indicator').style.display = 'none';
             content.innerHTML = `
                 <div class="error-message">
                     <strong>Generation failed</strong><br>
