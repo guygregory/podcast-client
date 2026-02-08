@@ -46,7 +46,7 @@ LOCALES_CSV = Path(__file__).resolve().parent / "locales.csv"
 PODCASTS_DIR = Path(__file__).resolve().parent / "podcasts"
 PODCASTS_DIR.mkdir(exist_ok=True)
 
-# In-memory job store  {job_id: {status, error, audio_path, generation}}
+# In-memory job store  {job_id: {status, error, audio_path, generation, cancel_event, client_info}}
 jobs: dict[str, dict] = {}
 
 # ---------------------------------------------------------------------------
@@ -153,11 +153,14 @@ def generate():
         file_ext = file_path.suffix.lower()
 
     job_id = f"{datetime.now().strftime('%m%d%Y%H%M%S')}_{target_locale}"
+    cancel_event = threading.Event()
     jobs[job_id] = {
         "status": "Starting",
         "error": None,
         "audio_path": None,
         "generation": None,
+        "cancel_event": cancel_event,
+        "client_info": {"region": region, "sub_key": sub_key, "api_version": api_version},
     }
 
     # Collect optional podcast options into a dict
@@ -193,6 +196,35 @@ def job_status(job_id: str):
         error=job["error"],
         has_audio=job["audio_path"] is not None,
     )
+
+
+@app.route("/api/cancel/<job_id>", methods=["POST"])
+def cancel_job(job_id: str):
+    """Cancel a running generation job."""
+    job = jobs.get(job_id)
+    if job is None:
+        return jsonify(error="Job not found"), 404
+
+    # Signal the background thread to stop
+    cancel_event = job.get("cancel_event")
+    if cancel_event:
+        cancel_event.set()
+
+    # Attempt to delete the generation via the API (best-effort)
+    info = job.get("client_info", {})
+    if info.get("region") and info.get("sub_key") and info.get("api_version"):
+        try:
+            client = PodcastClient(
+                region=info["region"],
+                sub_key=info["sub_key"],
+                api_version=info["api_version"],
+            )
+            client.request_delete_generation(job_id)
+        except Exception:
+            pass  # best-effort
+
+    job["status"] = "Cancelled"
+    return jsonify(status="Cancelled")
 
 
 @app.route("/api/download/<job_id>")
@@ -293,9 +325,35 @@ def _run_generation(
             jobs[job_id]["error"] = error
             return
 
-        # Poll until terminated
+        # Poll until terminated (check cancellation between polls)
         jobs[job_id]["status"] = "Running"
-        final_status = client.request_operation_until_terminated(operation_location)
+        cancel_event = jobs[job_id].get("cancel_event")
+
+        # Use a simple polling loop that checks cancellation
+        import time
+        while True:
+            if cancel_event and cancel_event.is_set():
+                jobs[job_id]["status"] = "Cancelled"
+                return
+            try:
+                success_poll, error_poll, op = client.request_get_generation(job_id)
+                if success_poll and op and op.status in (
+                    OperationStatus.Succeeded, OperationStatus.Failed
+                ):
+                    break
+            except Exception:
+                pass
+            # Wait 5 seconds between polls, but check cancel every second
+            for _ in range(5):
+                if cancel_event and cancel_event.is_set():
+                    jobs[job_id]["status"] = "Cancelled"
+                    return
+                time.sleep(1)
+
+        # Check cancellation before fetching result
+        if cancel_event and cancel_event.is_set():
+            jobs[job_id]["status"] = "Cancelled"
+            return
 
         # Fetch the completed generation
         success, error, generation = client.request_get_generation(job_id)

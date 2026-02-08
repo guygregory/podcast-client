@@ -84,9 +84,15 @@
             <!-- Server file picker -->
             <div id="server-file-group" class="form-group" style="display:none">
                 <label for="server_file">Available files (input_files/)</label>
-                <select id="server_file" name="server_file">
-                    <option value="">Loading&hellip;</option>
-                </select>
+                <div class="server-file-row">
+                    <select id="server_file" name="server_file" class="server-file-select">
+                        <option value="">Loading&hellip;</option>
+                    </select>
+                    <div class="bulk-radios" id="bulk-radios">
+                        <label><input type="radio" name="bulk_mode" value="single" checked onchange="toggleBulkMode()"> Single</label>
+                        <label><input type="radio" name="bulk_mode" value="bulk" onchange="toggleBulkMode()"> Bulk (all)</label>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -161,10 +167,10 @@
 
         <div class="generate-row">
             <button type="submit" class="btn btn-primary" id="btn-generate">
-                Generate Podcast
+                Generate podcast
             </button>
             <span class="generate-spinner" id="generate-spinner" aria-hidden="true"></span>
-            <span id="processing-indicator" style="display:none; flex:1; font-style:italic; color:var(--text-muted, #888);">Processing&hellip;</span>
+            <span id="processing-indicator" style="display:none; flex:1; font-style:italic; color:var(--text-muted, #888); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Processing&hellip;</span>
             <audio controls id="persistent-player" style="display:none"></audio>
         </div>
     </form>
@@ -201,6 +207,30 @@
         const source = document.querySelector('input[name="file_source"]:checked').value;
         document.getElementById('upload-file-group').style.display = source === 'upload' ? '' : 'none';
         document.getElementById('server-file-group').style.display = source === 'server' ? '' : 'none';
+
+        // Reset to Single mode when switching sources
+        if (source === 'upload') {
+            const singleRadio = document.querySelector('input[name="bulk_mode"][value="single"]');
+            if (singleRadio) { singleRadio.checked = true; toggleBulkMode(); }
+        }
+        // Update button text based on current mode
+        toggleBulkMode();
+    }
+
+    // ---- Bulk mode toggle ---------------------------------------------------
+    function toggleBulkMode() {
+        const source = document.querySelector('input[name="file_source"]:checked').value;
+        const bulk = document.querySelector('input[name="bulk_mode"]:checked')?.value === 'bulk';
+        const btn = document.getElementById('btn-generate');
+        const sel = document.getElementById('server_file');
+
+        if (source === 'server' && bulk) {
+            sel.disabled = true;
+            btn.textContent = 'Generate podcasts';
+        } else {
+            sel.disabled = false;
+            btn.textContent = 'Generate podcast';
+        }
     }
 
     // ---- Show / hide API key -----------------------------------------------
@@ -217,11 +247,16 @@
             const resp = await fetch('/api/input-files');
             const data = await resp.json();
             const sel = document.getElementById('server_file');
+            const bulkRadios = document.querySelectorAll('input[name="bulk_mode"]');
             sel.innerHTML = '';
             if (data.files.length === 0) {
                 sel.innerHTML = '<option value="">No files found</option>';
+                sel.disabled = true;
+                bulkRadios.forEach(r => r.disabled = true);
                 return;
             }
+            sel.disabled = false;
+            bulkRadios.forEach(r => r.disabled = false);
             data.files.forEach(f => {
                 const opt = document.createElement('option');
                 opt.value = f;
@@ -229,6 +264,7 @@
                 if (f === data.preselected) opt.selected = true;
                 sel.appendChild(opt);
             });
+            toggleBulkMode();
         } catch (e) {
             console.error('Failed to load server files', e);
         }
@@ -246,9 +282,89 @@
     // ---- Form submission ---------------------------------------------------
     document.getElementById('gen-form').addEventListener('submit', async (e) => {
         e.preventDefault();
+        const fileSource = document.querySelector('input[name="file_source"]:checked').value;
+        const bulkMode = document.querySelector('input[name="bulk_mode"]:checked')?.value === 'bulk';
+
+        if (fileSource === 'server' && bulkMode) {
+            await runBulkGeneration();
+        } else {
+            await runSingleGeneration();
+        }
+    });
+
+    // Track the current job ID and polling interval for cancellation
+    let _currentJobId = null;
+    let _currentPollInterval = null;
+    let _savedButtonText = 'Generate podcast';
+
+    function switchToCancelButton() {
+        const btn = document.getElementById('btn-generate');
+        _savedButtonText = btn.textContent;
+        btn.textContent = 'Cancel';
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-cancel');
+        btn.disabled = false;
+        btn.type = 'button';  // prevent form submit
+    }
+
+    function restoreGenerateButton() {
+        const btn = document.getElementById('btn-generate');
+        btn.textContent = _savedButtonText;
+        btn.classList.remove('btn-cancel');
+        btn.classList.add('btn-primary');
+        btn.disabled = false;
+        btn.type = 'submit';
+        document.getElementById('generate-spinner').style.display = 'none';
+        _currentJobId = null;
+    }
+
+    async function cancelCurrentJob() {
+        if (!_currentJobId) return;
+        const jobId = _currentJobId;
+
+        // Stop polling immediately
+        if (_currentPollInterval) {
+            clearInterval(_currentPollInterval);
+            _currentPollInterval = null;
+        }
+
+        // Hide spinner, processing text, player
+        document.getElementById('generate-spinner').style.display = 'none';
+        document.getElementById('processing-indicator').style.display = 'none';
+        document.getElementById('persistent-player').pause();
+        document.getElementById('persistent-player').style.display = 'none';
+        document.getElementById('status-area').style.display = 'none';
+        document.getElementById('result-area').style.display = 'none';
+
+        // Resolve any pending poll promise
+        if (_currentPollResolve) {
+            _currentPollResolve('Cancelled');
+            _currentPollResolve = null;
+        }
+
+        restoreGenerateButton();
+
+        // Fire cancel request (best-effort, non-blocking)
+        fetch(`/api/cancel/${jobId}`, { method: 'POST' }).catch(() => {});
+    }
+
+    // Click handler on the generate/cancel button
+    document.getElementById('btn-generate').addEventListener('click', (e) => {
+        const btn = document.getElementById('btn-generate');
+        if (btn.classList.contains('btn-cancel')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            cancelCurrentJob();
+        }
+    });
+
+    async function runSingleGeneration(overrideFile, currentIndex, totalCount) {
+        // Default to 1/1 for single-file generation
+        const idx = currentIndex || 1;
+        const total = totalCount || 1;
+
         const btn = document.getElementById('btn-generate');
         const genSpinner = document.getElementById('generate-spinner');
-        btn.disabled = true;
         genSpinner.style.display = 'inline-block';
 
         // Reset UI
@@ -257,6 +373,10 @@
         document.getElementById('poll-dots').textContent = '';
 
         const formData = new FormData(document.getElementById('gen-form'));
+        if (overrideFile) {
+            formData.set('server_file', overrideFile);
+            formData.set('file_source', 'server');
+        }
 
         // Stop audio and show processing indicator
         const player = document.getElementById('persistent-player');
@@ -265,15 +385,16 @@
         player.style.display = 'none';
 
         // Determine the filename being processed
-        const fileSource = document.querySelector('input[name="file_source"]:checked').value;
+        const fileSource = formData.get('file_source');
         let processingName = '';
         if (fileSource === 'upload') {
             const fileInput = document.getElementById('file');
             processingName = fileInput.files.length > 0 ? fileInput.files[0].name : 'file';
         } else {
-            processingName = document.getElementById('server_file').value || 'file';
+            processingName = formData.get('server_file') || 'file';
         }
-        processingIndicator.innerHTML = 'Processing "' + processingName + '"';
+        processingIndicator.textContent = `Processing (${idx}/${total}): ${processingName}`;
+        processingIndicator.title = processingName;
         processingIndicator.style.display = 'inline';
 
         try {
@@ -281,54 +402,92 @@
             const data = await resp.json();
             if (!resp.ok) {
                 showToast(data.error || 'Request failed');
-                btn.disabled = false;
+                restoreGenerateButton();
                 genSpinner.style.display = 'none';
                 processingIndicator.style.display = 'none';
-                return;
+                return false;
             }
+
+            // Switch to Cancel button now that the job is running
+            _currentJobId = data.job_id;
+            switchToCancelButton();
 
             // Show status area and begin polling
             document.getElementById('status-area').style.display = '';
-            pollStatus(data.job_id);
+            const result = await pollStatusAsync(data.job_id);
+            if (result === 'Cancelled') return false;
+            return true;
         } catch (err) {
             showToast('Network error: ' + err.message);
-            btn.disabled = false;
+            restoreGenerateButton();
             genSpinner.style.display = 'none';
             processingIndicator.style.display = 'none';
+            return false;
         }
-    });
+    }
 
-    // ---- Polling -----------------------------------------------------------
-    function pollStatus(jobId) {
-        const badge = document.getElementById('status-badge');
-        const dots = document.getElementById('poll-dots');
-        let dotCount = 0;
+    async function runBulkGeneration() {
+        const sel = document.getElementById('server_file');
+        const files = Array.from(sel.options).map(o => o.value).filter(v => v);
+        if (files.length === 0) { showToast('No files available.'); return; }
 
-        const interval = setInterval(async () => {
-            try {
-                const resp = await fetch(`/api/status/${jobId}`);
-                const data = await resp.json();
+        const processingIndicator = document.getElementById('processing-indicator');
+        for (let i = 0; i < files.length; i++) {
+            const result = await runSingleGeneration(files[i], i + 1, files.length);
+            // If cancelled, stop the bulk loop
+            if (_currentJobId === null && !result) break;
+        }
+        restoreGenerateButton();
+    }
 
-                // Update badge
-                badge.textContent = data.status;
-                badge.className = 'status-badge ' + data.status.toLowerCase();
+    // ---- Async polling (returns a promise) ----------------------------------
+    let _currentPollResolve = null;
 
-                // Animate dots
-                dotCount++;
-                dots.textContent = '.'.repeat(dotCount % 30 + 1);
+    function pollStatusAsync(jobId) {
+        return new Promise((resolve) => {
+            _currentPollResolve = resolve;
+            const badge = document.getElementById('status-badge');
+            const dots = document.getElementById('poll-dots');
+            let dotCount = 0;
 
-                // Terminal states
-                if (['Succeeded', 'Failed'].includes(data.status)) {
-                    clearInterval(interval);
-                    dots.textContent = '';
-                    document.getElementById('btn-generate').disabled = false;
-                    document.getElementById('generate-spinner').style.display = 'none';
-                    showResult(jobId, data);
+            const interval = setInterval(async () => {
+                try {
+                    const resp = await fetch(`/api/status/${jobId}`);
+                    const data = await resp.json();
+
+                    badge.textContent = data.status;
+                    badge.className = 'status-badge ' + data.status.toLowerCase();
+
+                    dotCount++;
+                    dots.textContent = '.'.repeat(dotCount % 30 + 1);
+
+                    if (['Succeeded', 'Failed', 'Cancelled'].includes(data.status)) {
+                        clearInterval(interval);
+                        _currentPollInterval = null;
+                        _currentPollResolve = null;
+                        dots.textContent = '';
+                        if (data.status === 'Cancelled') {
+                            restoreGenerateButton();
+                            resolve('Cancelled');
+                        } else {
+                            showResult(jobId, data);
+                            restoreGenerateButton();
+                            resolve(data.status);
+                        }
+                    }
+                } catch (err) {
+                    console.error('Poll error', err);
                 }
-            } catch (err) {
-                console.error('Poll error', err);
-            }
-        }, 5000);
+            }, 5000);
+            _currentPollInterval = interval;
+        });
+    }
+
+    // ---- Polling (kept for backwards compat, but bulk uses pollStatusAsync) ----
+    function pollStatus(jobId) {
+        pollStatusAsync(jobId).then(() => {
+            restoreGenerateButton();
+        });
     }
 
     // ---- Show result -------------------------------------------------------

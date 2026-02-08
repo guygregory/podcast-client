@@ -140,6 +140,35 @@ textarea {
     cursor: pointer;
 }
 
+/* ---- Server file row (dropdown + bulk radios) ---- */
+.server-file-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.server-file-select {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.bulk-radios {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.bulk-radios label {
+    font-weight: 400;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
 /* ---- Collapsible options panel ---- */
 .collapse-toggle {
     display: flex;
@@ -193,6 +222,21 @@ textarea {
 .btn-primary:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+.btn-cancel {
+    background: var(--danger);
+    color: #fff;
+}
+
+.btn-cancel:hover {
+    background: #a52528;
+}
+
+#btn-generate {
+    min-width: 11rem;
+    text-align: center;
+    justify-content: center;
 }
 
 /* ---- Generate row (button + persistent player) ---- */
