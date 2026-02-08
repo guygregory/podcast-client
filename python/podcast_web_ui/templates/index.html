@@ -309,6 +309,7 @@
         const controls = form.querySelectorAll('input, select, textarea, button');
         controls.forEach(el => {
             if (el.id === 'btn-generate') return; // managed separately
+            if (el.id === 'toggle-options') return; // keep collapsible toggle usable
             el.disabled = disabled;
         });
     }

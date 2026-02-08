@@ -174,10 +174,13 @@ def generate():
         "additional_instructions": additional_instructions,
     }
 
+    # Track whether the file was uploaded so we can clean it up later
+    is_uploaded_file = file_source == "upload"
+
     # Fire off background thread ----------------------------------------------
     thread = threading.Thread(
         target=_run_generation,
-        args=(job_id, region, sub_key, api_version, target_locale, str(file_path), file_ext, podcast_options),
+        args=(job_id, region, sub_key, api_version, target_locale, str(file_path), file_ext, podcast_options, is_uploaded_file),
         daemon=True,
     )
     thread.start()
@@ -274,6 +277,7 @@ def _run_generation(
     file_path: str,
     file_ext: str,
     podcast_options: dict | None = None,
+    is_uploaded_file: bool = False,
 ):
     """Run the full generation lifecycle in a background thread."""
     try:
@@ -413,6 +417,15 @@ def _run_generation(
     except Exception as exc:
         jobs[job_id]["status"] = "Failed"
         jobs[job_id]["error"] = str(exc)
+    finally:
+        # Clean up uploaded temp files — server-side files are left untouched
+        if is_uploaded_file:
+            try:
+                p = Path(file_path)
+                if p.is_file():
+                    p.unlink()
+            except Exception:
+                pass  # best-effort cleanup
 
 
 def _safe_gen_dict(gen: PodcastGenerationDefinition) -> dict | None:
