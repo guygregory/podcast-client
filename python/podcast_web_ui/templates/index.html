@@ -159,9 +159,13 @@
             </div>
         </div>
 
-        <button type="submit" class="btn btn-primary" id="btn-generate">
-            Generate Podcast
-        </button>
+        <div class="generate-row">
+            <button type="submit" class="btn btn-primary" id="btn-generate">
+                Generate Podcast
+            </button>
+            <span class="generate-spinner" id="generate-spinner" aria-hidden="true"></span>
+            <audio controls id="persistent-player" style="display:none"></audio>
+        </div>
     </form>
 
     <!-- ===== Status ===== -->
@@ -242,7 +246,9 @@
     document.getElementById('gen-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('btn-generate');
+        const genSpinner = document.getElementById('generate-spinner');
         btn.disabled = true;
+        genSpinner.style.display = 'inline-block';
 
         // Reset UI
         document.getElementById('status-area').style.display = 'none';
@@ -257,6 +263,7 @@
             if (!resp.ok) {
                 showToast(data.error || 'Request failed');
                 btn.disabled = false;
+                genSpinner.style.display = 'none';
                 return;
             }
 
@@ -266,6 +273,7 @@
         } catch (err) {
             showToast('Network error: ' + err.message);
             btn.disabled = false;
+            genSpinner.style.display = 'none';
         }
     });
 
@@ -293,6 +301,7 @@
                     clearInterval(interval);
                     dots.textContent = '';
                     document.getElementById('btn-generate').disabled = false;
+                    document.getElementById('generate-spinner').style.display = 'none';
                     showResult(jobId, data);
                 }
             } catch (err) {
@@ -308,6 +317,11 @@
         area.style.display = '';
 
         if (data.status === 'Succeeded' && data.has_audio) {
+            // Update the persistent player next to the Generate button
+            const player = document.getElementById('persistent-player');
+            player.src = `/api/download/${jobId}`;
+            player.style.display = '';
+
             content.innerHTML = `
                 <p style="color:var(--success);font-weight:600;">&#9989; Podcast generated successfully!</p>
                 <audio controls src="/api/download/${jobId}"></audio>
