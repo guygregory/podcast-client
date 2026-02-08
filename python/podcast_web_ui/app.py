@@ -62,7 +62,6 @@ ENV_DEFAULTS = {
     "REGION": _env.get("REGION", "") or "eastus",
     "SUB_KEY": _env.get("SUB_KEY", ""),
     "API_VERSION": _env.get("API_VERSION", "") or "2026-01-01-preview",
-    "CONTENT_FILE_PATH": _env.get("CONTENT_FILE_PATH", ""),
 }
 
 
@@ -96,7 +95,7 @@ def list_input_files():
         for f in sorted(INPUT_FILES_DIR.iterdir()):
             if f.is_file() and f.suffix.lower() in (".txt", ".pdf"):
                 files.append(f.name)
-    return jsonify(files=files, preselected=ENV_DEFAULTS["CONTENT_FILE_PATH"])
+    return jsonify(files=files, preselected="")
 
 
 @app.route("/api/generate", methods=["POST"])
