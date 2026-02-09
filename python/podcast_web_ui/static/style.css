@@ -92,6 +92,13 @@ textarea {
     margin-bottom: 1rem;
 }
 
+.char-counter {
+    margin-top: 0.35rem;
+    text-align: right;
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
 .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;

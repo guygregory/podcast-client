@@ -143,8 +143,8 @@
                     <div class="form-group">
                         <label for="host">Host Configuration</label>
                         <select id="host" name="host">
-                            <option value="OneHost">One Host</option>
-                            <option value="TwoHosts" selected>Two Hosts</option>
+                            <option value="OneHost" selected>One Host</option>
+                            <option value="TwoHosts">Two Hosts</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -160,7 +160,10 @@
                 <div class="form-group">
                     <label for="additional_instructions">Additional Instructions</label>
                     <textarea id="additional_instructions" name="additional_instructions"
-                              rows="3" placeholder="e.g. Focus on technology trends"></textarea>
+                              rows="3" placeholder="e.g. Focus on technology trends" maxlength="1000"></textarea>
+                    <div class="char-counter" id="additional-instructions-counter">
+                        <span id="additional-instructions-count">0</span>/1000
+                    </div>
                 </div>
 
                 <div class="form-group" style="margin-top:.5em">
@@ -247,6 +250,22 @@
         inp.type = isPassword ? 'text' : 'password';
         document.getElementById('toggle-key').textContent = isPassword ? '\u{1F648}' : '\u{1F441}';
     });
+
+    // ---- Additional instructions counter ----------------------------------
+    const additionalInstructions = document.getElementById('additional_instructions');
+    const additionalInstructionsCount = document.getElementById('additional-instructions-count');
+    const additionalInstructionsMax = 1000;
+
+    function updateAdditionalInstructionsCounter() {
+        if (!additionalInstructions || !additionalInstructionsCount) return;
+        additionalInstructionsCount.textContent = String(additionalInstructions.value.length);
+    }
+
+    if (additionalInstructions) {
+        additionalInstructions.setAttribute('maxlength', String(additionalInstructionsMax));
+        updateAdditionalInstructionsCounter();
+        additionalInstructions.addEventListener('input', updateAdditionalInstructionsCounter);
+    }
 
     // ---- Load server files -------------------------------------------------
     async function loadServerFiles() {
