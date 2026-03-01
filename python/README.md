@@ -41,7 +41,7 @@
 # Usage for command line tool:
 ## Usage
 Run main.py with command in below pattern:
-    python main_podcast.py --api-version 2026-01-01-preview --region eastus --sub_key [YourSpeechresourceKey] [SubCommands] [args...]
+    python main_podcast.py --api_version 2026-01-01-preview --region eastus --sub_key [YourSpeechresourceKey] [SubCommands] [args...]
 ## Supported API version
 | API version | Description |
 | --- | --- |
@@ -67,7 +67,7 @@ Run main.py with command in below pattern:
 | Argument name | Required | Description |
 | --- | --- | --- |
 | --content_file_azure_blob_url | No | Input file url, supported formats are .pdf and .txt. The file should be publicly accessible or accessible with a SAS token. |
-| --plain_text_content_file_path | No | Path to a plain text file containing the podcast content, the file will be uploaded by Text property with plain text. If this argument is provided, the content will be read from the specified file instead of using a URL. |
+| --content_file_path | No | Path to a plain text file containing the podcast content, the file will be uploaded by Text property with plain text. If this argument is provided, the content will be read from the specified file instead of using a URL. |
 | --base64_content_file_path | No | Path to a file containing the base64-encoded content for the podcast, the file will be uploaded by Base64Text property with base64-encoded content. If this argument is provided, the content will be read from the specified file instead of using a URL. |
 | --target_locale | No | The locale of the podcast. Locale code follows BCP-47. You can find the text to speech locale list [here](https://learn.microsoft.com/azure/ai-services/speech-service/language-support?tabs=tts). |
 | --voice_name | No | The voice name to be used for TTS synthesis. You can find the voice name list [here](https://learn.microsoft.com/azure/ai-services/speech-service/language-support?tabs=tts). |
